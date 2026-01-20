@@ -1,0 +1,90 @@
+/* =====================================================
+   DRAWER COMPONENT
+===================================================== */
+
+.drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+/* Dark overlay */
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Drawer panel */
+.drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow-y: auto;
+  background-size: cover;
+  background-position: center;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
+/* Header */
+.drawer-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* Title */
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Content */
+.drawer-content {
+  padding: 1.5rem;
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+/* drawer.css */
+
+.drawer-panel {
+  @apply absolute right-0 top-0 w-[420px] h-full
+         border-l border-white/40 shadow-2xl
+         overflow-auto bg-cover bg-center;
+}
+
+.drawer-header {
+  @apply sticky top-0 border-b border-white/60
+         px-6 py-4 flex items-center justify-between;
+}
+
+.drawer-content {
+  @apply p-6 text-[15px];
+}
+
+.drawer-label {
+  @apply block mb-2 font-semibold;
+}
+
+.drawer-input {
+  @apply w-full mb-4 px-3 py-2 border rounded-xl;
+}
+
+.glass-card {
+  @apply rounded-2xl bg-[rgba(255,255,255,0.15)]
+         border border-white/20 backdrop-blur-lg
+         p-4 shadow-sm
+         text-sm md:text-base
+         flex flex-col gap-1;
+}

@@ -1,0 +1,113 @@
+@theme {
+  --font-nunito: 'Nunito', sans-serif;
+}
+
+/* =====================================================
+   GLOBAL BASE
+===================================================== */
+body {
+  font-family: var(--font-nunito);
+  color: #090c64;
+}
+
+/* ---------------- DARK MODE ---------------- */
+.dark body {
+  color: white;
+  background-color: #0b0c1a;
+}
+
+/* Nasconde scrollbar */
+*::-webkit-scrollbar { width: 0; height: 0; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* =====================================================
+   LAYER: BASE
+===================================================== */
+@layer base {
+
+  /* Input di base */
+  input {
+    @apply w-full h-[35px] bg-[rgba(217,217,217,0.3)]
+           border border-white/30 rounded-xl px-4 shadow-md
+           outline-none font-semibold focus:ring-2 transition-all duration-200;
+  }
+
+  /* Light mode input */
+  :root input {
+    @apply text-[#090c64] placeholder:text-[#090c64]/70 focus:ring-[#090c64];
+  }
+
+  /* Dark mode input */
+  .dark input {
+    @apply text-white placeholder:text-white/60 focus:ring-white;
+    background-color: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.25) !important;
+  }
+
+  /* Box */
+  .custom-box {
+    @apply rounded-xl shadow-white border border-white/90 backdrop-blur-lg
+           transition-colors duration-300 bg-white/10 text-[#090c64];
+  }
+
+  .dark .custom-box {
+    background-color: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+    color: white !important;
+  }
+
+  /* Custom input */
+  .custom-input {
+    @apply border border-white/30 rounded-xl px-4 shadow-md outline-none font-semibold
+           focus:ring-2 transition-all duration-200 text-[#090c64] placeholder:text-[#090c64]/70
+           focus:ring-[#090c64];
+  }
+
+  .dark .custom-input {
+    @apply text-white placeholder:text-white focus:ring-white;
+    background-color: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  /* Button (primario) */
+  .custom-button {
+    @apply rounded-xl p-2 shadow-md border border-white/20 transition-all duration-500
+           cursor-pointer font-bold text-white bg-[#090c64];
+    font-family: var(--font-nunito);
+  }
+
+  .dark .custom-button {
+    background-color: white !important;
+    color: #090c64 !important;
+    border-color: rgba(255,255,255,0.3) !important;
+  }
+
+  /* Button light */
+  .custom-button-light {
+    @apply rounded-xl p-2 shadow-md border border-white/20 transition-all duration-500
+           cursor-pointer font-bold bg-white text-[#090c64];
+    font-family: var(--font-nunito);
+  }
+
+  .dark .custom-button-light {
+    background-color: transparent !important;
+    border-color: rgba(255,255,255,0.4) !important;
+    color: white !important;
+  }
+}
+
+/* Headings */
+h2 {
+  @apply font-bold text-xl gap-3;
+  color: #090c64;
+}
+
+h3 {
+  @apply font-bold text-xl;
+  color: #090c64;
+}
+
+.dark h2,
+.dark h3 {
+  color: white !important;
+}

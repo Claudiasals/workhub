@@ -1,0 +1,173 @@
+/* Calendarbox — react-big-calendar dark mode override */
+/* Wrapper calendario */
+.dark .rbc-calendar {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white !important;
+}
+
+/* Testo generale — esclusi i bottoni custom */
+.dark .rbc-calendar *:not(button):not(.calendar-btn):not(.calendar-view-btn) {
+  color: white !important;
+  border-color: rgba(255,255,255,0.15) !important;
+}
+
+/* Toolbar custom wrapper */
+.calendar-toolbar {
+  @apply px-6 py-3 my-5 rounded-xl backdrop-blur-md shadow-md border flex justify-between items-center;
+  background: rgba(255,255,255,0.20);
+}
+
+.dark .calendar-toolbar {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Header settimana/giorno */
+.rbc-header {
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(255,255,255,0.5);
+}
+
+.dark .rbc-header {
+  background: rgba(255,255,255,0.12) !important;
+  color: white;
+}
+
+/* Celle giorni (month / week / day) */
+.rbc-month-row,
+.rbc-day-bg {
+  background: transparent !important;
+}
+
+.dark .rbc-day-bg {
+  background: rgba(255,255,255,0.03) !important;
+}
+
+.dark .rbc-month-row {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Oggi */
+.rbc-today {
+  background-color: rgba(9,12,100,0.10) !important;
+}
+
+.dark .rbc-today {
+  background-color: rgba(255,255,255,0.12) !important;
+}
+
+/* Eventi — shift / evento */
+.rbc-event {
+  border-radius: 10px !important;
+  padding: 4px 6px !important;
+  font-weight: bold;
+}
+
+.dark .rbc-event {
+  color: white !important;
+}
+
+/* Eventi nel mese (pallini) */
+.rbc-date-cell > div {
+  color: inherit;
+}
+
+/* Overlay eventi espansi */
+.dark .rbc-event-label {
+  color: white !important;
+}
+
+/* Slot tempi week/day view */
+.rbc-time-slot {
+  border-color: rgba(0,0,0,0.08);
+}
+
+.dark .rbc-time-slot {
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+/* Linea oraria */
+.dark .rbc-current-time-indicator {
+  background: #ff4d4d !important;
+}
+
+/* No data / empty zone */
+.dark .rbc-agenda-view table td {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: white !important;
+}
+
+.dark .rbc-agenda-view table th {
+  background-color: rgba(255,255,255,0.12) !important;
+  color: white !important;
+}
+
+/* Scrollbar interna calendario */
+.rbc-time-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+}
+
+.dark .rbc-time-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3) !important;
+}
+
+
+/* =====================================================
+   CALENDAR EVENT COMPONENT
+===================================================== */
+
+.calendar-event-dot {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.calendar-event-month-expanded {
+  font-size: 10px;
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.calendar-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+
+.calendar-event-shift-pill {
+  width: 2rem;
+  min-width: 2rem;
+  height: 1.75rem;
+  border-radius: 0.75rem;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-event-details {
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+}

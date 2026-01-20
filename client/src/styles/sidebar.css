@@ -1,0 +1,71 @@
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+.sidebar-root {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem; /* gap-14 */
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  padding: 1rem 0.75rem;
+  margin-top: 5rem; /* mt-20 */
+  transition: all 0.3s ease;
+}
+
+/* Base link style */
+.sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  padding: 0.25rem 0;
+  margin: 0 0.5rem;
+  border-radius: 0.75rem;
+  user-select: none;
+  transition: all 0.25s ease;
+}
+
+/* =====================
+   LIGHT MODE
+===================== */
+.sidebar-link.light {
+  color: white;
+}
+
+.sidebar-link.light:hover {
+  border: 2px solid rgba(167, 139, 250, 0.2); /* violet-400/20 */
+}
+
+/* Active light */
+.sidebar-link.light.active {
+  background-color: white;
+  color: #090c64;
+  border: 2px solid rgba(139, 92, 246, 0.6); /* violet-500/60 */
+  transform: scale(1.05);
+}
+
+/* =====================
+   DARK MODE
+===================== */
+.sidebar-link.dark {
+  background-color: rgba(139, 92, 246, 0.6); /* violet/60 */
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sidebar-link.dark:hover {
+  background-color: rgba(139, 92, 246, 0.4);
+}
+
+/* Active dark */
+.sidebar-link.dark.active {
+  background-color: transparent;
+  color: white;
+  border: 2px solid rgba(139, 92, 246, 0.6);
+  transform: scale(1.05);
+}

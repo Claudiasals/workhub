@@ -1,0 +1,63 @@
+@layer utilities {
+  /* CalendarBox utility aliases */
+  .w-full { width: 100%; }
+  .h-full { height: 100%; }
+  .min-h-\[700px\] { min-height: 700px; }
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .flex-wrap { flex-wrap: wrap; }
+  .items-center { align-items: center; }
+  .justify-center { justify-content: center; }
+  .gap-1 { gap: 0.25rem; }
+  .gap-2 { gap: 0.5rem; }
+  .gap-3 { gap: 0.75rem; }
+  .px-4 { padding-left: 1rem; padding-right: 1rem; }
+  .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .mt-1 { margin-top: 0.25rem; }
+  .mt-3 { margin-top: 0.75rem; }
+  .mt-4 { margin-top: 1rem; }
+  .mr-6 { margin-right: 1.5rem; }
+  .ml-1 { margin-left: 0.25rem; }
+  .ml-auto { margin-left: auto; }
+  .w-3 { width: 0.75rem; }
+  .w-4 { width: 1rem; }
+  .w-8 { width: 2rem; }
+  .min-w-8 { min-width: 2rem; }
+  .h-3 { height: 0.75rem; }
+  .h-4 { height: 1rem; }
+  .h-7 { height: 1.75rem; }
+  .select-none { user-select: none; }
+  .cursor-pointer { cursor: pointer; }
+  .overflow-hidden { overflow: hidden; }
+  .relative { position: relative; }
+  .rounded { border-radius: 0.25rem; }
+  .rounded-xl { border-radius: 0.75rem; }
+  .border { border: 1px solid #d1d5db; }
+  .border-current { border-color: currentColor; }
+  .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.05); }
+  .transition-all { transition: all 0.2s ease; }
+  .text-xs { font-size: 0.75rem; line-height: 1rem; }
+  .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+  .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+  .text-\[10px\] { font-size: 10px; line-height: 1.2; }
+  .text-\[12px\] { font-size: 12px; line-height: 1.2; }
+  .text-\[13px\] { font-size: 13px; line-height: 1.2; }
+  .text-\[15px\] { font-size: 15px; line-height: 1.3; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .font-extrabold { font-weight: 800; }
+  .italic { font-style: italic; }
+  .text-white { color: #ffffff; }
+  .text-black { color: #000000; }
+  .text-\[\#090c64\] { color: #090c64; }
+  .bg-white { background-color: #ffffff; }
+  .bg-white\/70 { background-color: rgba(255,255,255,0.7); }
+  .bg-black\/20 { background-color: rgba(0,0,0,0.2); }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .opacity-90 { opacity: 0.9; }
+}

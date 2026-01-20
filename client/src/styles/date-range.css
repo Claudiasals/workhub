@@ -1,0 +1,123 @@
+/* =====================================================
+   REACT-DATE-RANGE — DARK MODE (PULSANTI + TESTI)
+===================================================== */
+
+/* Wrapper preset (Today, Last 7 days, ecc.) */
+.dark .rdrDefinedRangesWrapper {
+  background-color: rgba(255,255,255,0.01) !important;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Singolo pulsante preset */
+.dark .rdrStaticRange {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Testo preset */
+.dark .rdrStaticRangeLabel {
+  color: white !important;
+  font-weight: 600;
+}
+
+/* Hover preset */
+.dark .rdrStaticRange:hover .rdrStaticRangeLabel {
+  color: #090c64 !important;
+}
+
+/* Preset attivo */
+.dark .rdrStaticRangeSelected .rdrStaticRangeLabel {
+  color: #090c64 !important;
+  font-weight: 700;
+}
+
+/* Box input range (custom range) */
+.dark .rdrInputRanges {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Input numerici */
+.dark .rdrInputRangeInput {
+  background-color: rgba(255,255,255,0.12) !important;
+  color: white !important;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0.5rem;
+}
+
+/* Label input (es. days up to today) */
+.dark .rdrInputRangeLabel {
+  color: rgba(255,255,255,0.7) !important;
+}
+
+/* Footer / pulsante Today */
+.dark .rdrDateDisplayWrapper {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Date display */
+.dark .rdrDateDisplayItem {
+  background-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.25);
+}
+
+.dark .rdrDateDisplayItem input {
+  color: white !important;
+}
+
+/* Pulsanti frecce mese */
+.dark .rdrNextPrevButton {
+  background-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Disabilitati */
+.dark .rdrDayDisabled .rdrDayNumber span {
+  color: rgba(255,255,255,0.25) !important;
+}
+
+/* Wrapper delle due box */
+.dark .rdrDateDisplayWrapper {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+}
+
+/* Contenitore interno */
+.dark .rdrDateDisplay {
+  gap: 0.75rem;
+}
+
+/* Singola box data */
+.dark .rdrDateDisplayItem {
+  background-color: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  border-radius: 0.75rem;
+  box-shadow: none;
+}
+
+/* Input data: testo BLU, non bianco */
+.dark .rdrDateDisplayItem input {
+  background: transparent !important;
+  color: #090c64 !important;
+  font-weight: 700;
+}
+
+/* Placeholder */
+.dark .rdrDateDisplayItem input::placeholder {
+  color: rgba(9,12,100,0.6) !important;
+}
+
+/* Box attiva (focus) */
+.dark .rdrDateDisplayItemActive {
+  border-color: #090c64 !important;
+  box-shadow: 0 0 0 1px rgba(9,12,100,0.6);
+}
+
+/* Wrapper principale */
+.rdrCalendarWrapper {
+  font-family: var(--font-nunito), 'Nunito', sans-serif !important;
+}
+
+/* Tutti i testi interni */
+.rdrCalendarWrapper * {
+  font-family: var(--font-nunito), 'Nunito', sans-serif !important;
+}

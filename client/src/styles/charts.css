@@ -1,0 +1,69 @@
+/* ===== MUI CHARTS TOOLTIP DARK MODE ===== */
+.MuiChartsTooltip-root {
+  font-family: var(--font-nunito), 'Nunito', sans-serif !important;
+  background-color: #ffffff !important;
+  color: #4d4368 !important;
+  border-radius: 8px !important;
+}
+
+.dark .MuiChartsTooltip-root {
+  background-color: #5a4a7a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* Paper e contenitore del tooltip */
+.dark .MuiChartsTooltip-paper,
+.dark .MuiChartsTooltip-container {
+  background-color: #9886bb !important;
+  color: #ffffff !important;
+}
+
+.MuiChartsTooltip-table {
+  background-color: #ffffff !important;
+  color: #4d4368 !important;
+}
+
+.dark .MuiChartsTooltip-table {
+  background-color: #5a4a7a !important;
+  color: #ffffff !important;
+}
+
+/* Tutte le celle del tooltip */
+.MuiChartsTooltip-labelCell,
+.MuiChartsTooltip-valueCell,
+.MuiChartsTooltip-cell {
+  color: #4d4368 !important;
+  font-weight: 600 !important;
+}
+
+.dark .MuiChartsTooltip-labelCell,
+.dark .MuiChartsTooltip-valueCell,
+.dark .MuiChartsTooltip-cell {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Header del tooltip (dove appare la data) */
+.dark .MuiChartsTooltip-root th,
+.dark .MuiChartsTooltip-root thead,
+.dark .MuiChartsTooltip-table th {
+  color: #ffffff !important;
+}
+
+/* Tutte le righe */
+.dark .MuiChartsTooltip-row,
+.dark .MuiChartsTooltip-root tr {
+  background-color: #5a4a7a !important;
+}
+
+/* Marcatori colorati */
+.dark .MuiChartsTooltip-mark {
+  border-color: #ffffff !important;
+}
+
+/* Testo generico dentro il tooltip */
+.dark .MuiChartsTooltip-root * {
+  color: #ffffff !important;
+}
