@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Table from "../../components/Table";
 import FilterByCard from "../../components/Customer/FilterByCard";
 import AddCustomerForm from "../../components/Customer/AddCustomerForm";
+import AppFeedbackModal from "../../components/AppFeedbackModal";
 
 import { useLanguage } from "../../context/LanguageContext";
 import {
@@ -29,6 +30,7 @@ const CustomersPage = () => {
 
   /* LOCAL STATE */
   const [cardFilter, setCardFilter] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
   /* INITIAL FETCH */
   useEffect(() => {
@@ -90,7 +92,11 @@ const CustomersPage = () => {
   /* CREATE CUSTOMER */
   const handleAddCustomer = async (newCustomer) => {
     if (!token) {
-      alert(t("tokenNonDisponibileEffettuaLogin"));
+      setFeedback({
+        tone: "warning",
+        title: t("modaleAttenzione"),
+        message: t("tokenNonDisponibileEffettuaLogin"),
+      });
       return;
     }
 
@@ -101,8 +107,21 @@ const CustomersPage = () => {
           token,
         })
       ).unwrap();
+      setFeedback({
+        tone: "success",
+        title: t("modaleSuccesso"),
+        message: t("clienteCreato"),
+      });
     } catch (err) {
       console.error("Customer creation error:", err);
+      setFeedback({
+        tone: "error",
+        title: t("modaleErrore"),
+        message:
+          typeof err === "string"
+            ? err
+            : err?.message || t("erroreImprevisto"),
+      });
     }
   };
 
@@ -118,23 +137,30 @@ const CustomersPage = () => {
   }
 
   return (
-    <div className="w-full min-h-screen p-8">
+    <div className="w-full min-h-screen">
       {/* CUSTOMERS TABLE*/}
       <Table
         data={tableData}
         columns={columns}
         columnLabels={columnLabels}
+        toolbarTitle={t("clienti")}
         onRowClick={(row) => navigate(`/customer/${row._id}`)}
         sortLogic={(a, b) => a.firstName.localeCompare(b.firstName)}
         customToolbar={() => (
-          <>
-            {/* Filter by loyalty card */}
-            <FilterByCard onFilter={setCardFilter} />
-
-            {/* Create new customer */}
-            <AddCustomerForm onAdd={handleAddCustomer} />
-          </>
+          <FilterByCard onFilter={setCardFilter} />
         )}
+        customToolbarRight={() => (
+          <AddCustomerForm onAdd={handleAddCustomer} />
+        )}
+      />
+
+      <AppFeedbackModal
+        open={Boolean(feedback)}
+        title={feedback?.title}
+        message={feedback?.message}
+        tone={feedback?.tone}
+        closeLabel={t("chiudi")}
+        onClose={() => setFeedback(null)}
       />
     </div>
   );

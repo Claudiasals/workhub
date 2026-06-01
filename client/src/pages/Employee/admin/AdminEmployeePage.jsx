@@ -21,6 +21,7 @@ import { fetchAllShiftsAsync } from "../../../store/feature/shiftsSlice";
 
 import Drawer from "../../../components/Drawer";
 import Table from "../../../components/Table";
+import AppFeedbackModal from "../../../components/AppFeedbackModal";
 
 const AdminEmployeePage = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const AdminEmployeePage = () => {
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
   // Redux state
-  const { list: employees = [], loading, error } = useSelector(
+  const { list: employees = [], error } = useSelector(
     (state) => state.users || {}
   );
   const { list: pointsOfSale = [] } = useSelector(
@@ -43,8 +44,9 @@ const AdminEmployeePage = () => {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [generatedPassword, setGeneratedPassword] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
   // Fetch initial data
   useEffect(() => {
@@ -61,7 +63,7 @@ const AdminEmployeePage = () => {
       value: employees.length,
       icon: (
         <UsersThreeIcon
-          size={28}
+          size={24}
           color={theme === "dark" ? "white" : "#090c64"}
           weight="duotone"
         />
@@ -72,7 +74,7 @@ const AdminEmployeePage = () => {
       value: employees.filter((e) => e.onVacation).length,
       icon: (
         <UserCircleMinusIcon
-          size={28}
+          size={24}
           color={theme === "dark" ? "white" : "#090c64"}
           weight="duotone"
         />
@@ -137,12 +139,21 @@ const AdminEmployeePage = () => {
       ).unwrap();
 
       setGeneratedPassword(res.tempPassword || "");
-      setToastMessage(t("dipendenteCreato"));
-      setTimeout(() => setToastMessage(""), 3000);
+      setFeedback({
+        tone: "success",
+        title: t("modaleSuccesso"),
+        message: t("dipendenteCreato"),
+      });
       form.reset();
-    } catch {
-      setToastMessage(t("erroreCreazioneDipendente"));
-      setTimeout(() => setToastMessage(""), 3000);
+    } catch (err) {
+      setFeedback({
+        tone: "error",
+        title: t("modaleErrore"),
+        message:
+          typeof err === "string"
+            ? err
+            : err?.message || t("erroreCreazioneDipendente"),
+      });
     }
   };
 
@@ -186,36 +197,38 @@ const AdminEmployeePage = () => {
 
   const handleDeleteUser = async (employee) => {
     if (!token) return;
+    setEmployeeToDelete(employee);
+  };
 
-    if (
-      !window.confirm(
-        `${t("vuoiEliminare")} ${employee.firstName} ${employee.lastName}?`
-      )
-    )
-      return;
-
-    dispatch(deleteUserAsync({ id: employee._id, token }));
+  const confirmDeleteUser = () => {
+    if (!employeeToDelete || !token) return;
+    dispatch(deleteUserAsync({ id: employeeToDelete._id, token }));
+    setEmployeeToDelete(null);
   };
 
   return (
-    <div className="w-full h-full flex flex-col gap-8 overflow-y-auto p-4">
+    <div
+      data-page-scroll
+      className="adminEmployee w-full h-full flex flex-col gap-6 overflow-y-auto"
+    >
       {/* STATS + ADD EMPLOYEE */}
-      <section className="grid grid-cols-3 gap-6 items-center">
+      <section className="employee-stats-grid">
         {stats.map((s, i) => (
           <div
             key={i}
-            className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 border border-white/90 shadow-md bg-[#fafafa20] dark:bg-[#fafafa10] ${textColor}`}
+            className={`app-surface page-info-box ${textColor}`}
           >
-            {s.icon}
-            <span className="font-bold">
-              {s.label}: {s.value}
+            <span className="employee-stat-label">
+              {s.icon}
+              <span>{s.label}</span>
             </span>
+            <span className="employee-stat-value font-semibold">{s.value}</span>
           </div>
         ))}
 
         <div
           onClick={() => setCreateDrawerOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 border border-white/90 shadow-md cursor-pointer font-bold bg-[#fafafa20] dark:bg-[#fafafa10]"
+          className="app-surface page-info-box employee-stat-action cursor-pointer"
         >
           <span className="text-xl">+</span>
           {t("aggiungiDipendente")}
@@ -245,7 +258,7 @@ const AdminEmployeePage = () => {
             name: "delete",
             icon: (
               <TrashIcon
-                size={26}
+                size={16}
                 color={theme === "dark" ? "#ff4d4d" : "#ff0000"}
                 weight="duotone"
               />
@@ -313,12 +326,6 @@ const AdminEmployeePage = () => {
             </button>
           </div>
         </form>
-
-        {toastMessage && (
-          <div className="mt-3 p-2 text-center rounded-xl bg-green-500 text-white">
-            {toastMessage}
-          </div>
-        )}
       </Drawer>
 
       {/* EDIT DRAWER */}
@@ -373,6 +380,40 @@ const AdminEmployeePage = () => {
           {error}
         </p>
       )}
+
+      <AppFeedbackModal
+        open={Boolean(feedback)}
+        title={feedback?.title}
+        message={feedback?.message}
+        tone={feedback?.tone}
+        closeLabel={t("chiudi")}
+        onClose={() => setFeedback(null)}
+      />
+
+      <AppFeedbackModal
+        open={Boolean(employeeToDelete)}
+        title={t("modaleAttenzione")}
+        message={
+          employeeToDelete
+            ? `${t("vuoiEliminare")} ${employeeToDelete.firstName} ${employeeToDelete.lastName}?`
+            : ""
+        }
+        tone="warning"
+        onClose={() => setEmployeeToDelete(null)}
+        actions={[
+          {
+            label: t("annulla"),
+            onClick: () => setEmployeeToDelete(null),
+            className: "custom-button-light",
+          },
+          {
+            label: t("elimina"),
+            onClick: confirmDeleteUser,
+            className:
+              "rounded-xl bg-red-600 px-4 py-2 font-bold text-white shadow-md transition hover:bg-red-700",
+          },
+        ]}
+      />
     </div>
   );
 };

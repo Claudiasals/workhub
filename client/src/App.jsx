@@ -1,13 +1,13 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // Layouts
 import PublicLayout from "./layout/PublicLayout.jsx";
 
 // Route guards
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 
 // Public pages
-import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage.jsx";
 import PasswordRecoveryPage from "./pages/PasswordRecoveryPage.jsx";
 import TwoFA from "./pages/TwoFA.jsx";
@@ -26,9 +26,11 @@ import SettingsPage from "./pages/SettingsPage.jsx";
 
 const App = () => {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Public routes */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/twofa" element={<TwoFA />} />
       <Route path="/forgot-password" element={<PasswordRecoveryPage />} />
@@ -52,6 +54,7 @@ const App = () => {
         </Route>
       </Route>
     </Routes>
+    </>
   );
 };
 

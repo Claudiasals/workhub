@@ -14,8 +14,13 @@ export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(localStorage.getItem("lang") || "it");
 
   // Toggle between supported languages
-  const toggleLang = () => {
-    const newLang = lang === "it" ? "en" : "it";
+  const toggleLang = (targetLang) => {
+    const newLang =
+      targetLang && translations[targetLang]
+        ? targetLang
+        : lang === "it"
+          ? "en"
+          : "it";
     setLang(newLang);
     localStorage.setItem("lang", newLang);
   };

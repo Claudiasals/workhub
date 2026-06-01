@@ -11,8 +11,7 @@ import { useLanguage } from "../context/LanguageContext";
 
 import bgLight from "../assets/bg/bg.jpg";
 import bgDark from "../assets/bg/bgScuro.jpg";
-import iconLogo from "../assets/logo/iconaLogo.png";
-import iconLogoDark from "../assets/logo/iconaLogoChiara.png";
+import logoFull from "../assets/logo/LogoCompletoSenzaBG.png";
 
 const TwoFA = () => {
   const { theme } = useTheme();
@@ -33,8 +32,10 @@ const TwoFA = () => {
   const [code, setCode] = useState("");
 
   // Theme-based UI values
-  const backgroundImage = theme === "dark" ? bgDark : bgLight;
-  const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
+  const isDark = theme === "dark";
+  const backgroundImage = isDark ? bgDark : bgLight;
+  const textColor = isDark ? "text-white" : "text-[#090c64]";
+  const demoTextColor = isDark ? "text-[#8ea2ff]/80" : "text-[#090c64]/75";
 
   // Handles 2FA form submission
   const handleSubmit = (e) => {
@@ -69,81 +70,89 @@ const TwoFA = () => {
       />
 
       <div
-        className="absolute w-[822px] h-[659px] lg:w-[60vw] lg:h-[90vh] md:w-[90vw] md:h-[70vh]  
-        bg-white/20 dark:bg-white/10 backdrop-blur-sm
-        border border-white/30 dark:border-white/90 rounded-[25px] shadow-md
-        transition-all duration-700"
-      />
-
-      <form
-        onSubmit={handleSubmit}
-        className="relative flex flex-col items-center z-20 w-full max-w-[822px] px-6 py-10"
+        className="
+          app-surface
+          relative z-20 w-[460px] max-w-[calc(100vw-32px)]
+          px-8 py-8 sm:px-10
+          flex items-center justify-center
+          transition-all duration-700
+        "
       >
-        <div className="flex items-center justify-center gap-8 mb-8">
-          <Link to="/">
-            <img
-              className="w-[120px] h-[114px] drop-shadow-lg transition-transform duration-300 hover:scale-105"
-              alt="Logo"
-              src={theme === "dark" ? iconLogoDark : iconLogo}
-            />
-          </Link>
-
-          <div className="text-center">
-            <span
-              className={`text-4xl font-bold font-nunito uppercase transition-colors duration-500 ${textColor}`}
-            >
-              {t("loginTitolo")}
-            </span>
-            <br />
-            <span
-              className={`font-bold font-nunito text-sm transition-colors duration-500 ${textColor}`}
-            >
-              {t("credenzialiDemo")}
-            </span>
-          </div>
-        </div>
-
-        {error && (
-          <p className="text-[#DC2626] font-bold mt-3 mb-2 animate-pulse text-center">
-            {error}
-          </p>
-        )}
-
-        <div className="m-4 w-full sm:w-[486px]">
-          <label
-            htmlFor="token2fa"
-            className={`block text-[18px] font-bold font-nunito mb-2 ${textColor}`}
-          >
-            {t("autenticazione2FA")}
-          </label>
-
-          <input
-            id="token2fa"
-            type="text"
-            autoComplete="one-time-code"
-            className="custom-input w-full"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder={t("inserisciCodice2FA")}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className={`btn-login ${loading ? "btn-login-disabled" : ""}`}
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-[380px] flex flex-col items-center"
         >
-          {loading ? (
-            <span className="animate-pulse font-bold text-[18px] font-nunito">
-              {t("accessoInCorso")}
-            </span>
-          ) : (
-            <span className="text-[20px] font-bold font-nunito">
-              {t("login")}
-            </span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+            <Link to="/login">
+              <img
+                className="w-[210px] h-auto object-contain drop-shadow-lg"
+                alt="Logo"
+                src={logoFull}
+              />
+            </Link>
+
+            <div className="text-center">
+              <span
+                className={`text-2xl font-bold font-nunito uppercase transition-colors duration-500 ${textColor}`}
+              >
+                {t("loginTitolo")}
+              </span>
+              <br />
+              <span
+                className={`text-sm font-normal font-nunito leading-snug transition-colors duration-500 ${demoTextColor}`}
+              >
+                {t("credenzialiDemo")}
+              </span>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-[#DC2626] font-bold mt-3 mb-2 animate-pulse text-center">
+              {error}
+            </p>
           )}
-        </button>
-      </form>
+
+          <div className="mb-4 w-full">
+            <label
+              htmlFor="token2fa"
+              className={`block text-[15px] font-bold font-nunito mb-2 ${textColor}`}
+            >
+              {t("autenticazione2FA")}
+            </label>
+
+            <input
+              id="token2fa"
+              type="text"
+              autoComplete="one-time-code"
+              className="custom-input w-full"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder={t("inserisciCodice2FA")}
+            />
+            <p
+              className={`mt-2 text-sm font-normal leading-snug transition-colors duration-500 ${demoTextColor}`}
+            >
+              {t("codiceDemo2FA")}
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`btn-login ${loading ? "btn-login-disabled" : ""}`}
+          >
+            {loading ? (
+              <span className="animate-pulse font-bold text-[18px] font-nunito">
+                {t("accessoInCorso")}
+              </span>
+            ) : (
+              <span className="text-[20px] font-bold font-nunito">
+                {t("login")}
+              </span>
+            )}
+          </button>
+        </form>
+      </div>
     </main>
   );
 };

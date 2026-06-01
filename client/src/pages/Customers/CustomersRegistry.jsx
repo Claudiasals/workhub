@@ -1,9 +1,9 @@
 import { useDispatch, useSelector } from "react-redux";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
-import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import AppFeedbackModal from "../../components/AppFeedbackModal";
 
 import {
   PencilSimpleIcon,
@@ -23,10 +23,8 @@ import * as XLSX from "xlsx";
 
 const CustomersRegistry = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { theme } = useTheme();
   const { t } = useLanguage();
 
   /* REDUX STATE */
@@ -114,7 +112,6 @@ const CustomersRegistry = () => {
 
       setIsEditing(false);
       setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 3000);
     } catch (err) {
       console.error("Save customer error:", err);
     } finally {
@@ -172,7 +169,7 @@ const CustomersRegistry = () => {
   /* LOADING / EMPTY STATES */
   if (loading) {
     return (
-      <div className="w-full min-h-screen p-8">
+      <div className="w-full min-h-screen">
         {t("caricamentoClienti")}
       </div>
     );
@@ -180,25 +177,29 @@ const CustomersRegistry = () => {
 
   if (!customer) {
     return (
-      <div className="w-full min-h-screen p-8">
+      <div className="w-full min-h-screen">
         {t("clienteNonTrovato")}
       </div>
     );
   }
 
   return (
-    <div className="w-full h-auto mt-20 flex gap-6 px-8 pb-8">
-      {/* LEFT COLUMN — PROFILE */}
-      <div className="w-1/2 relative custom-box p-8">
-        {/* Save feedback */}
-        {showSaved && (
-          <div className="absolute top-3 right-3 bg-green-200 text-green-900 px-4 py-2 rounded-xl text-sm">
-            ✔ {t("modificheSalvate")}
-          </div>
-        )}
+    <div className="flex w-full flex-col gap-4 pb-8">
+      <div className="flex justify-end">
+        <Link
+          to="/customers"
+          className="inline-flex w-fit text-lg font-bold text-[#090c64] transition hover:underline dark:text-[#8ea2ff]"
+        >
+          {"< Torna alla lista clienti"}
+        </Link>
+      </div>
 
+      <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        {/* LEFT COLUMN - PROFILE & AFFILIATION */}
+        <div className="flex min-w-0 flex-col gap-6">
+          <div className="relative custom-box p-6">
         {/* Header actions */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="font-semibold">{t("anagrafica")}</h3>
 
           {!isEditing ? (
@@ -280,11 +281,59 @@ const CustomersRegistry = () => {
         </div>
       </div>
 
-      {/* RIGHT COLUMN — ORDERS & AFFILIATION*/}
-      <div className="w-1/2 flex flex-col gap-6">
+        {/* Affiliation */}
+        {customer.affiliateProgram && (
+          <div className="custom-box p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="font-semibold">{t("affiliazione")}</h3>
+              <button
+                onClick={exportAffiliateToExcel}
+                className="custom-button-light flex items-center gap-1"
+              >
+                <FileXlsIcon size={18} />
+                Excel
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="glass-card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <strong>{t("livelloTessera")}:</strong>{" "}
+                  {customer.affiliateProgram.name}
+                </div>
+
+                {customer.affiliateProgram.name === "standard" && (
+                  <div className="rounded-xl bg-white/80 p-3 text-sm sm:max-w-[58%]">
+                    {t("alRaggiungimentoDei")}{" "}
+                    <strong>10 {t("ordini")}</strong>,{" "}
+                    {t("laTesseraPassaAutomaticamenteDa")}{" "}
+                    <strong>Standard</strong> &rarr; <strong>Premium</strong>.
+                  </div>
+                )}
+              </div>
+
+              <div className="glass-card">
+                <strong>{t("puntiAccumulati")}:</strong>{" "}
+                {customer.affiliateProgram.points}
+              </div>
+              <div className="glass-card">
+                <strong>{t("numeroTessera")}:</strong>{" "}
+                {customer.affiliateProgram.cardNumber}
+              </div>
+              <div className="glass-card">
+                <strong>{t("programmaFedelta")}:</strong>{" "}
+                {t("attivo")}
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+
+        {/* RIGHT COLUMN - ORDERS */}
+        <div className="min-w-0 custom-box p-6">
         {/* Orders */}
-        <div className="custom-box p-6">
-          <div className="flex justify-between mb-3">
+        <div>
+          <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold">{t("storicoOrdini")}</h3>
             <button
               onClick={exportOrdersToExcel}
@@ -296,28 +345,48 @@ const CustomersRegistry = () => {
           </div>
 
           {customer.orders?.length ? (
-            customer.orders.map((order, idx) => (
-              <div key={idx} className="glass-card">
-                <strong>{t("prodotto")}:</strong>{" "}
-                {order.product?.name || "N/D"}
-                <br />
-                <strong>{t("prezzo")}:</strong>{" "}
-                {order.product?.price
-                  ? `${order.product.price} €`
-                  : "N/D"}
-                <br />
-                <strong>{t("quantità")}:</strong>{" "}
-                {order.quantity || 0}
-                <br />
-                <strong>{t("puntoVendita")}:</strong>{" "}
-                {order.pointOfSales?.name || "N/D"}
-                <br />
-                <strong>{t("data")}:</strong>{" "}
-                {order.createdAt
-                  ? new Date(order.createdAt).toLocaleDateString()
-                  : "N/D"}
-              </div>
-            ))
+            <div className="flex flex-col gap-3">
+              {customer.orders.map((order, idx) => (
+                <div
+                  key={idx}
+                  className="glass-card grid grid-cols-1 gap-4 md:grid-cols-2"
+                >
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <div>
+                      <strong>{t("numeroOrdine")}:</strong>{" "}
+                      <span className="break-all">{order._id || "N/D"}</span>
+                    </div>
+                    <div>
+                      <strong>{t("puntoVendita")}:</strong>{" "}
+                      {order.pointOfSales?.name || "N/D"}
+                    </div>
+                    <div>
+                      <strong>{t("data")}:</strong>{" "}
+                      {order.createdAt
+                        ? new Date(order.createdAt).toLocaleDateString()
+                        : "N/D"}
+                    </div>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <div>
+                      <strong>{t("prodotto")}:</strong>{" "}
+                      {order.product?.name || "N/D"}
+                    </div>
+                    <div>
+                      <strong>{t("prezzo")}:</strong>{" "}
+                      {order.product?.price
+                        ? `${order.product.price} \u20ac`
+                        : "N/D"}
+                    </div>
+                    <div>
+                      <strong>{t("quantita")}:</strong>{" "}
+                      {order.quantity || 0}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="glass-card text-center">
               {t("nessunOrdineTrovato")}
@@ -325,49 +394,17 @@ const CustomersRegistry = () => {
           )}
         </div>
 
-        {/* Affiliation */}
-        {customer.affiliateProgram && (
-          <div className="custom-box p-6">
-            <div className="flex justify-between mb-3">
-              <h3 className="font-semibold">{t("affiliazione")}</h3>
-              <button
-                onClick={exportAffiliateToExcel}
-                className="custom-button-light flex items-center gap-1"
-              >
-                <FileXlsIcon size={18} />
-                Excel
-              </button>
-            </div>
-
-            <div className="glass-card">
-              <strong>{t("livelloTessera")}:</strong>{" "}
-              {customer.affiliateProgram.name}
-            </div>
-
-            {customer.affiliateProgram.name === "standard" && (
-              <div className="bg-white/80 p-3 rounded-xl text-sm">
-                {t("alRaggiungimentoDei")}{" "}
-                <strong>10 {t("ordini")}</strong>,{" "}
-                {t("laTesseraPassaAutomaticamenteDa")}{" "}
-                <strong>Standard</strong> → <strong>Premium</strong>.
-              </div>
-            )}
-
-            <div className="glass-card">
-              <strong>{t("puntiAccumulati")}:</strong>{" "}
-              {customer.affiliateProgram.points}
-            </div>
-            <div className="glass-card">
-              <strong>{t("numeroTessera")}:</strong>{" "}
-              {customer.affiliateProgram.cardNumber}
-            </div>
-            <div className="glass-card">
-              <strong>{t("programmaFedelta")}:</strong>{" "}
-              {t("attivo")}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+
+      <AppFeedbackModal
+        open={showSaved}
+        title={t("modaleSuccesso")}
+        message={t("modificheSalvate")}
+        tone="success"
+        closeLabel={t("chiudi")}
+        onClose={() => setShowSaved(false)}
+      />
     </div>
   );
 };

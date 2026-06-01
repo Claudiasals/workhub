@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import {
-  UserCircleIcon,
   CalendarCheckIcon,
+  BagIcon,
+  CalendarBlankIcon,
+  NotePencilIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
 import { fetchUserByIdAsync } from "../../../store/feature/userSlice";
 import { fetchPointsOfSalesAsync } from "../../../store/feature/pointOfSalesSlice";
@@ -19,6 +21,7 @@ import {
   fetchLeaveByUserIdAsync,
   updateLeaveStatusAsync,
 } from "../../../store/feature/userLeave";
+import AppFeedbackModal from "../../../components/AppFeedbackModal";
 
 /* STATUS DOT COMPONENT */
 const StatusDot = ({ status }) => {
@@ -45,6 +48,8 @@ const AdminEmployeeDetailsPage = () => {
   const prevIdRef = useRef(null);
 
   const token = useSelector((state) => state.auth?.token);
+  const authUser = useSelector((state) => state.auth?.user);
+  const isAdmin = String(authUser?.role || "").toLowerCase() === "admin";
 
   /* REDUX STATE */
   const { selected: user, loading, error } = useSelector(
@@ -61,7 +66,7 @@ const AdminEmployeeDetailsPage = () => {
 
   /* LOCAL STATE */
   const [workplaceName, setWorkplaceName] = useState("");
-  const [shiftMessage, setShiftMessage] = useState("");
+  const [shiftFeedback, setShiftFeedback] = useState(null);
 
   /* WEEK DAYS CONFIG */
   const weekDays = [
@@ -75,7 +80,7 @@ const AdminEmployeeDetailsPage = () => {
 
   /* INITIAL FETCH */
   useEffect(() => {
-    if (!id || !token) return;
+    if (!id || !token || !isAdmin) return;
     if (prevIdRef.current === id) return;
 
     prevIdRef.current = id;
@@ -83,7 +88,7 @@ const AdminEmployeeDetailsPage = () => {
     dispatch(fetchPointsOfSalesAsync({ token }));
     dispatch(fetchUserShiftsAsync({ userId: id, token }));
     dispatch(fetchLeaveByUserIdAsync({ userId: id, token }));
-  }, [id, token, dispatch]);
+  }, [id, isAdmin, token, dispatch]);
 
   /* WORKPLACE LABEL */
   useEffect(() => {
@@ -122,9 +127,17 @@ const AdminEmployeeDetailsPage = () => {
   }, [user, workplaceName]);
 
   /* HELPERS */
-  const showShiftMessage = (msg) => {
-    setShiftMessage(msg);
-    setTimeout(() => setShiftMessage(""), 2500);
+  const showShiftMessage = (message, tone = "success") => {
+    setShiftFeedback({
+      message,
+      tone,
+      title:
+        tone === "error"
+          ? t("modaleErrore")
+          : tone === "warning"
+            ? t("modaleAttenzione")
+            : t("modaleSuccesso"),
+    });
   };
 
   const formatDate = (date) => {
@@ -140,7 +153,7 @@ const AdminEmployeeDetailsPage = () => {
     if (!token || !userShifts?._id) return;
 
     if (userShifts?.shifts?.[dayKey]?.[period]) {
-      showShiftMessage(t("turnoPresente"));
+      showShiftMessage(t("turnoPresente"), "warning");
       return;
     }
 
@@ -156,7 +169,7 @@ const AdminEmployeeDetailsPage = () => {
       ).unwrap();
       showShiftMessage(t("turnoCreato"));
     } catch {
-      showShiftMessage(t("erroreCreazioneTurno"));
+      showShiftMessage(t("erroreCreazioneTurno"), "error");
     }
   };
 
@@ -175,7 +188,7 @@ const AdminEmployeeDetailsPage = () => {
       ).unwrap();
       showShiftMessage(t("turnoEliminato"));
     } catch {
-      showShiftMessage(t("erroreEliminazioneTurno"));
+      showShiftMessage(t("erroreEliminazioneTurno"), "error");
     }
   };
 
@@ -206,14 +219,15 @@ const AdminEmployeeDetailsPage = () => {
   }, [userShifts, weekDays]);
 
   const topStats = [
-    { label: t("giorniLavorati"), number: giorniLavorati },
-    { label: t("ferieResidue"), number: leave?.vacationHours ?? 0 },
-    { label: t("permessiResidui"), number: leave?.leaveHours ?? 0 },
-    { label: t("richieste"), number: leave?.requestedHours?.length || 0 },
+    { label: t("giorniLavorati"), number: giorniLavorati, icon: CalendarCheckIcon },
+    { label: t("ferieResidue"), number: leave?.vacationHours ?? 0, icon: BagIcon },
+    { label: t("permessiResidui"), number: leave?.leaveHours ?? 0, icon: CalendarBlankIcon },
+    { label: t("richieste"), number: leave?.requestedHours?.length || 0, icon: NotePencilIcon },
   ];
 
   /* GUARDS */
   if (!token) return null;
+  if (!isAdmin) return <Navigate to="/personale" replace />;
   if (loading && !anagrafica)
     return <p className="p-4">{t("caricamentoDipendenti")}</p>;
   if (error && !anagrafica)
@@ -228,27 +242,32 @@ const AdminEmployeeDetailsPage = () => {
     return <p className="p-4">{t("caricamentoRichieste")}</p>;
 
   return (
-    <div className="adminEmployee w-full h-full flex flex-col gap-8 p-4 overflow-y-auto">
+    <div
+      data-page-scroll
+      className="adminEmployee w-full h-full flex flex-col gap-6 overflow-y-auto"
+    >
       {/* TOP STATS */}
-      <div className="grid grid-cols-4 gap-6">
-        {topStats.map((s, i) => (
-          <div key={i} className="custom-box flex flex-col items-center">
-            <span className="font-bold">{s.label}</span>
-            <span className="text-sm opacity-70 font-semibold">{s.number}</span>
+      <div className="employee-stats-grid">
+        {topStats.map(({ label, number, icon: Icon }, i) => (
+          <div key={i} className="custom-box page-info-box">
+            <span className="employee-stat-label">
+              {React.createElement(Icon, {
+                size: 24,
+                weight: "duotone",
+                color: theme === "dark" ? "white" : "#090c64",
+              })}
+              <span>{label}</span>
+            </span>
+            <span className="employee-stat-value font-semibold">{number}</span>
           </div>
         ))}
       </div>
 
       {/* PROFILE + SHIFTS */}
-      <div className="flex gap-6">
+      <div className="employee-two-column">
         {/* PROFILE */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <UserCircleIcon
-              size={32}
-              weight="duotone"
-              color={theme === "dark" ? "white" : "#090c64"}
-            />
+        <div className="custom-box p-6">
+          <div className="mb-4">
             <h2>{t("anagrafica")}</h2>
           </div>
 
@@ -262,21 +281,10 @@ const AdminEmployeeDetailsPage = () => {
         </div>
 
         {/* SHIFTS */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <CalendarCheckIcon
-              size={32}
-              weight="duotone"
-              color={theme === "dark" ? "white" : "#090c64"}
-            />
+        <div className="custom-box p-6">
+          <div className="mb-2">
             <h2>{t("turniSettimanali")}</h2>
           </div>
-
-          {shiftMessage && (
-            <div className="mb-3 px-3 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold">
-              {shiftMessage}
-            </div>
-          )}
 
           {shiftsError && (
             <div className="mb-3 px-3 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold">
@@ -292,11 +300,11 @@ const AdminEmployeeDetailsPage = () => {
               return (
                 <div
                   key={day.key}
-                  className="flex items-center justify-between bg-white/40 dark:bg-white/20 rounded-xl p-2"
+                  className="employee-shift-row bg-white/40 dark:bg-white/20 rounded-xl p-2"
                 >
                   <span className="font-semibold">{day.label}</span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="employee-shift-actions">
                     {d.morning ? (
                       <span className="bg-[#090c64] text-white text-xs px-3 py-1 rounded-xl">
                         08:00 - 13:00
@@ -338,7 +346,7 @@ const AdminEmployeeDetailsPage = () => {
                         className="p-2 bg-white/60 rounded-xl"
                       >
                         <TrashIcon
-                          size={18}
+                          size={16}
                           weight="duotone"
                           color={theme === "dark" ? "white" : "#090c64"}
                         />
@@ -353,11 +361,11 @@ const AdminEmployeeDetailsPage = () => {
       </div>
 
       {/* LEAVE REQUESTS */}
-      <div className="flex gap-6">
+      <div className="employee-two-column">
         {[{ list: ferie, title: t("richiestaFerie"), mode: "vacation" },
           { list: permessi, title: t("richiestaPermessi"), mode: "leave" },
         ].map(({ list, title }, i) => (
-          <div key={i} className="flex-1 custom-box p-6">
+          <div key={i} className="custom-box p-6">
             <h2 className="mb-4">{title}</h2>
 
             {list.length === 0 && (
@@ -369,14 +377,14 @@ const AdminEmployeeDetailsPage = () => {
             {list.map((r) => (
               <div
                 key={r._id}
-                className="flex items-center justify-between bg-white/40 dark:bg-white/20 rounded-xl p-2 mb-2"
+                className="employee-request-row bg-white/40 dark:bg-white/20 rounded-xl p-2 mb-2"
               >
                 <span className="font-semibold">
                   {anagrafica.nome} – {formatDate(r.from)} →{" "}
                   {formatDate(r.to)} ({r.hours}h)
                 </span>
 
-                <div className="flex items-center gap-4">
+                <div className="employee-request-actions">
                   <StatusDot status={r.status} />
                   <button
                     onClick={() => handleUpdateLeave(r, "approved")}
@@ -396,6 +404,15 @@ const AdminEmployeeDetailsPage = () => {
           </div>
         ))}
       </div>
+
+      <AppFeedbackModal
+        open={Boolean(shiftFeedback)}
+        title={shiftFeedback?.title}
+        message={shiftFeedback?.message}
+        tone={shiftFeedback?.tone}
+        closeLabel={t("chiudi")}
+        onClose={() => setShiftFeedback(null)}
+      />
     </div>
   );
 };

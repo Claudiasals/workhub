@@ -8,17 +8,24 @@ import {
 	updateShiftRequest,
 	deleteShiftRequest,
 } from "../../api/shiftsApi";
+import { logout } from "./authSlice";
+
+const sessionExpiredMessage = "Sessione scaduta. Effettua di nuovo il login.";
 
 /* ------------------- GET ALL ------------------- */
 // Async thunk to fetch all shifts from the server
 export const fetchAllShiftsAsync = createAsyncThunk(
 	"shifts/fetchAll",
-	async ({ token }, { rejectWithValue }) => {
+	async ({ token }, { dispatch, rejectWithValue }) => {
 		try {
 			// Call the API to fetch all shifts
 			const { res, data } = await fetchAllShiftsRequest({ token });
 
 			// If response is not OK, reject with error message
+			if (res.status === 401) {
+				dispatch(logout());
+				return rejectWithValue(sessionExpiredMessage);
+			}
 			if (!res.ok) return rejectWithValue(data.message);
 
 			// Return the data if successful
@@ -34,12 +41,16 @@ export const fetchAllShiftsAsync = createAsyncThunk(
 // Async thunk to fetch shifts for a specific user
 export const fetchUserShiftsAsync = createAsyncThunk(
 	"shifts/fetchByUser",
-	async ({ userId, token }, { rejectWithValue }) => {
+	async ({ userId, token }, { dispatch, rejectWithValue }) => {
 		try {
 			// Call the API to fetch shifts by user
 			const { res, data } = await fetchUserShiftsRequest({ userId, token });
 
 			// If response is not OK, reject with error message
+			if (res.status === 401) {
+				dispatch(logout());
+				return rejectWithValue(sessionExpiredMessage);
+			}
 			if (!res.ok) return rejectWithValue(data.message);
 
 			// Return the data if successful
@@ -55,7 +66,7 @@ export const fetchUserShiftsAsync = createAsyncThunk(
 // Async thunk to update a shift for a specific day or period
 export const updateShiftAsync = createAsyncThunk(
 	"shifts/update",
-	async ({ id, day, period, value, token }, { rejectWithValue }) => {
+	async ({ id, day, period, value, token }, { dispatch, rejectWithValue }) => {
 		try {
 			// Call the API to update the shift
 			const { res, data } = await updateShiftRequest({
@@ -67,6 +78,10 @@ export const updateShiftAsync = createAsyncThunk(
 			});
 
 			// If response is not OK, reject with error message
+			if (res.status === 401) {
+				dispatch(logout());
+				return rejectWithValue(sessionExpiredMessage);
+			}
 			if (!res.ok) return rejectWithValue(data.message);
 
 			// Return the updated data if successful
@@ -82,12 +97,16 @@ export const updateShiftAsync = createAsyncThunk(
 // Async thunk to delete a shift document
 export const deleteShiftAsync = createAsyncThunk(
 	"shifts/delete",
-	async ({ id, token }, { rejectWithValue }) => {
+	async ({ id, token }, { dispatch, rejectWithValue }) => {
 		try {
 			// Call the API to delete the shift
 			const { res, data } = await deleteShiftRequest({ id, token });
 
 			// If response is not OK, reject with error message
+			if (res.status === 401) {
+				dispatch(logout());
+				return rejectWithValue(sessionExpiredMessage);
+			}
 			if (!res.ok) return rejectWithValue(data.message);
 
 			// Return the deleted shift's id if successful

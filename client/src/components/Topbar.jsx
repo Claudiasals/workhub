@@ -5,16 +5,19 @@ import {
   GearIcon,
   SignOutIcon,
 } from "@phosphor-icons/react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../store/feature/authSlice";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 
+const SETTINGS_RETURN_PATH_KEY = "workhub-settings-return-path";
+
 const TopBar = () => {
   const user = useSelector((state) => state.auth.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
@@ -30,6 +33,19 @@ const TopBar = () => {
     navigate("/login");
   };
 
+  const handleSettingsClick = () => {
+    if (location.pathname === "/settings") {
+      const returnPath =
+        sessionStorage.getItem(SETTINGS_RETURN_PATH_KEY) || "/board";
+      navigate(returnPath, { replace: true });
+      return;
+    }
+
+    const returnPath = `${location.pathname}${location.search}${location.hash}`;
+    sessionStorage.setItem(SETTINGS_RETURN_PATH_KEY, returnPath);
+    navigate("/settings", { state: { returnTo: returnPath } });
+  };
+
   return (
     <header
       className={`
@@ -39,7 +55,7 @@ const TopBar = () => {
     >
       <div className="topbar-left">
         <UserIcon
-          size={28}
+          size={24}
           weight="duotone"
           color={theme === "dark" ? "white" : "#090c64"}
           cursor="pointer"
@@ -52,25 +68,34 @@ const TopBar = () => {
       </div>
 
       <div className="topbar-actions">
-        <button onClick={handleThemeToggle}>
+        <button
+          onClick={handleThemeToggle}
+          title={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
+          aria-label={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
+        >
           {theme === "dark" ? (
-            <MoonIcon size={26} color="white" weight="duotone" />
+            <SunIcon size={24} color="white" weight="duotone" />
           ) : (
-            <SunIcon size={26} color="#090c64" weight="duotone" />
+            <MoonIcon size={24} color="#090c64" weight="duotone" />
           )}
         </button>
 
-        <Link to="/settings">
+        <button
+          type="button"
+          onClick={handleSettingsClick}
+          title={t("impostazioni")}
+          aria-label={t("impostazioni")}
+        >
           <GearIcon
-            size={26}
+            size={24}
             weight="duotone"
             color={theme === "dark" ? "white" : "#090c64"}
           />
-        </Link>
+        </button>
 
         <button onClick={handleLogout} title="Logout">
           <SignOutIcon
-            size={26}
+            size={24}
             weight="duotone"
             color={theme === "dark" ? "white" : "#090c64"}
             cursor="pointer"

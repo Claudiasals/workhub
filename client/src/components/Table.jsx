@@ -1,22 +1,29 @@
 import { useState, useMemo } from "react";
 import { useLanguage } from "../context/LanguageContext";
-import { useTheme } from "../context/ThemeContext";
 
 const Table = ({
   data,
   columns,
   columnLabels,
+  toolbarTitle,
   customToolbar,
+  customToolbarRight,
   actions,
   actionLabel = null,
   onRowClick,
   sortLogic = null,
+  variant = "default",
+  showSort = true,
+  showSearch = true,
+  searchTerm: controlledSearchTerm,
+  onSearchTermChange,
 }) => {
   const { t } = useLanguage();
-  const { theme } = useTheme();
 
   // Search query state
-  const [searchTerm, setSearchTerm] = useState("");
+  const [internalSearchTerm, setInternalSearchTerm] = useState("");
+  const searchTerm = controlledSearchTerm ?? internalSearchTerm;
+  const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
 
   // A–Z sorting toggle
   const [sortAZ, setSortAZ] = useState(false);
@@ -64,28 +71,56 @@ const Table = ({
     return result;
   }, [searchTerm, data, columns, sortAZ, sortLogic]);
 
+  const isEmbedded = variant === "embedded";
+  const showToolbar =
+    toolbarTitle || showSort || showSearch || customToolbar || customToolbarRight;
+
   return (
-    <div className="table-container table-wrapper">
-      <div className="table-toolbar">
-        <div className="table-toolbar-left">
-          <button
-            onClick={() => setSortAZ(!sortAZ)}
-            className="table-sort-btn"
-          >
-            {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
-          </button>
+    <div
+      className={`table-container ${
+        isEmbedded ? "table-container-embedded" : "table-wrapper"
+      }`}
+    >
+      {showToolbar && (
+        <div className="table-toolbar">
+          <div className="table-toolbar-left">
+            {toolbarTitle && (
+              <h2 className="table-toolbar-title">
+                {toolbarTitle}
+              </h2>
+            )}
 
-          {customToolbar && customToolbar()}
+            {showSort && (
+              <button
+                onClick={() => setSortAZ(!sortAZ)}
+                className="table-sort-btn"
+              >
+                {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
+              </button>
+            )}
+
+            {customToolbar && customToolbar()}
+          </div>
+
+          {showSearch && (
+            <div className="table-toolbar-search">
+              <input
+                type="text"
+                placeholder={t("cerca")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="table-search"
+              />
+            </div>
+          )}
+
+          {customToolbarRight && (
+            <div className="table-toolbar-right">
+              {customToolbarRight()}
+            </div>
+          )}
         </div>
-
-        <input
-          type="text"
-          placeholder={t("cerca")}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="table-search"
-        />
-      </div>
+      )}
 
       <div className="table-scroll-wrapper">
         <table className="table-base">

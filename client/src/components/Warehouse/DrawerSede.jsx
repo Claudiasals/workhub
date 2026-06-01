@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "../../context/LanguageContext";
 import bgLight from "../../assets/bg/bg.jpg";
+import bgDark from "../../assets/bg/bgScuro.jpg";
+import { useTheme } from "../../context/ThemeContext";
 
 const DrawerSede = ({ open, onClose, productData, userWorkplaceId }) => {
   // Product name search input
@@ -10,6 +13,7 @@ const DrawerSede = ({ open, onClose, productData, userWorkplaceId }) => {
   const [results, setResults] = useState([]);
 
   const { t } = useLanguage();
+  const { theme } = useTheme();
 
   // Closes drawer on ESC key press
   useEffect(() => {
@@ -59,33 +63,31 @@ const DrawerSede = ({ open, onClose, productData, userWorkplaceId }) => {
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+  const content = (
+    <div className="drawer-root">
+      <div className="drawer-overlay" onClick={onClose} />
 
       <aside
-        className="absolute right-0 top-0 w-[420px] h-full
-                   border-l border-white/40 shadow-2xl
-                   overflow-auto bg-cover bg-center"
+        className="drawer-panel"
         role="dialog"
         aria-modal="true"
-        style={{ backgroundImage: `url(${bgLight})` }}
+        style={{ "--drawer-bg-image": `url(${theme === "dark" ? bgDark : bgLight})` }}
       >
-        <header className="sticky top-0 border-b border-white/60 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#090c64]">
+        <header className="drawer-header">
+          <h2 className="text-base font-semibold">
             {t("disponibilitaAltreSedi")}
           </h2>
 
           <button
             onClick={onClose}
-            className="custom-button text-sm bg-[#090c64] text-white"
+            className="custom-button text-sm"
           >
             {t("chiudi")}
           </button>
         </header>
 
-        <div className="p-6 text-[15px] text-[#090c64]">
-          <label className="block mb-2 font-semibold">
+        <div className="drawer-content">
+          <label className="drawer-label">
             {t("nomeProdotto")}
           </label>
 
@@ -94,15 +96,23 @@ const DrawerSede = ({ open, onClose, productData, userWorkplaceId }) => {
             placeholder="Es. BILLY Libreria"
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
-            className="w-full mb-4 px-3 py-2 border rounded-xl"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                searchStores();
+              }
+            }}
+            className="drawer-search mb-4"
           />
 
-          <button
-            onClick={searchStores}
-            className="custom-button text-sm bg-[#090c64] text-white mb-6"
-          >
-            {t("cercaDisponibilita")}
-          </button>
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={searchStores}
+              className="custom-button text-sm"
+            >
+              {t("cercaDisponibilita")}
+            </button>
+          </div>
 
           {results.length === 0 ? (
             <p className="opacity-70">
@@ -166,6 +176,8 @@ const DrawerSede = ({ open, onClose, productData, userWorkplaceId }) => {
       </aside>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 export default DrawerSede;

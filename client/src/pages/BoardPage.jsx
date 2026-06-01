@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { createElement, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -7,16 +7,18 @@ import { useLanguage } from "../context/LanguageContext";
 import CalendarBox from "../components/CalendarBox";
 import Table from "../components/Table";
 import Drawer from "../components/Drawer";
+import AppFeedbackModal from "../components/AppFeedbackModal";
 
 import {
   WarehouseIcon,
   ShoppingCartSimpleIcon,
   UserCircleCheckIcon,
-  ChalkboardSimpleIcon,
   PackageIcon,
   WarningOctagonIcon,
   CalendarIcon,
-  NotePencilIcon,
+  MegaphoneIcon,
+  PencilSimpleIcon,
+  SirenIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
 
@@ -36,9 +38,15 @@ const BoardPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Auth and role data
-  const { role } = useSelector((state) => state.auth.user);
+  // Auth data
   const token = useSelector((state) => state.auth.token);
+  const authUser = useSelector((state) => state.auth.user);
+  const role = authUser?.role;
+  const userWorkplaceId =
+    typeof authUser?.workplace === "string"
+      ? authUser.workplace
+      : authUser?.workplace?._id || authUser?.workplace?.id;
+  const canManageBoard = role === "admin";
 
   // Global redux data
   const users = useSelector((state) => state.users);
@@ -48,9 +56,23 @@ const BoardPage = () => {
   const items = useSelector((state) => state.items);
   const events = useSelector((state) => state.events.events);
 
-  // Products below stock threshold
-  const lowStockProducts =
-    items?.list?.filter((item) => item.stock <= item.stockLimit) || [];
+  // Products below stock threshold, scoped to the logged user's workplace
+  const lowStockProducts = useMemo(() => {
+    const itemList = items?.list || [];
+
+    return itemList.filter((item) => {
+      const itemWorkplaceId =
+        typeof item.pointOfSales === "string"
+          ? item.pointOfSales
+          : item.pointOfSales?._id || item.pointOfSales?.id;
+
+      const matchesWorkplace =
+        !userWorkplaceId ||
+        String(itemWorkplaceId) === String(userWorkplaceId);
+
+      return matchesWorkplace && item.stock <= item.stockLimit;
+    });
+  }, [items?.list, userWorkplaceId]);
 
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
@@ -60,7 +82,7 @@ const BoardPage = () => {
 
     dispatch(fetchEventsAsync({ token }));
     dispatch(fetchProducts(token));
-    dispatch(fetchItems(token));
+    dispatch(fetchItems());
     dispatch(fetchOrders({ token }));
   }, [dispatch, token]);
 
@@ -83,6 +105,8 @@ const BoardPage = () => {
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+  const [eventToDelete, setEventToDelete] = useState(null);
+  const [boardSearchTerm, setBoardSearchTerm] = useState("");
 
   // Open drawer in edit mode
   const openDrawerEdit = (row) => {
@@ -124,14 +148,19 @@ const BoardPage = () => {
 
   // Delete board event
   const handleDelete = (row) => {
-    if (window.confirm(`${t("seiSicuroEliminareEvento")} "${row.title}"?`)) {
-      dispatch(deleteEventAsync({ id: row._id, token }));
-    }
+    setEventToDelete(row);
+  };
+
+  const confirmDeleteEvent = () => {
+    if (!eventToDelete) return;
+    dispatch(deleteEventAsync({ id: eventToDelete._id, token }));
+    setEventToDelete(null);
   };
 
   return (
     <div
-      className="w-full h-full flex flex-col gap-8 overflow-y-auto
+      data-page-scroll
+      className="w-full h-full flex flex-col gap-6 overflow-y-auto
       [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
     >
       {/* Top statistics */}
@@ -165,16 +194,14 @@ const BoardPage = () => {
         ].map(({ icon: Icon, label, value }) => (
           <div
             key={label}
-            className={`flex items-center justify-between rounded-xl px-3 py-2 shadow
-            bg-[#fafafa20] dark:bg-[#fafafa10] backdrop-blur-sm
-            border border-white/30 dark:border-white/80 ${textColor}`}
+            className={`app-surface page-info-box flex items-center justify-between ${textColor}`}
           >
             <div className="flex items-center gap-2">
-              <Icon
-                size={28}
-                color={theme === "dark" ? "white" : "#090c64"}
-                weight="duotone"
-              />
+              {createElement(Icon, {
+                size: 24,
+                color: theme === "dark" ? "white" : "#090c64",
+                weight: "duotone",
+              })}
               <span className="font-bold text-[14px]">{label}</span>
             </div>
             <span className="text-sm opacity-70 font-semibold">{value}</span>
@@ -186,45 +213,56 @@ const BoardPage = () => {
       <div className="grid grid-cols-2 gap-6 w-full">
         {/* Board */}
         <div
-          className={`flex flex-col gap-4 p-4
-          bg-[#fafafa20] dark:bg-[#fafafa10] backdrop-blur-sm
-          border border-white/30 dark:border-white/80 rounded-xl shadow-md
-          ${textColor}`}
+          className={`app-surface flex flex-col gap-3 p-4 ${textColor}`}
         >
-          <div className="flex items-start gap-4">
-            <ChalkboardSimpleIcon
-              size={28}
+          <div className="dashboard-card-header flex items-center gap-4">
+            <MegaphoneIcon
+              size={24}
               color={theme === "dark" ? "white" : "#090c64"}
               weight="duotone"
+              className="preserve-icon-size shrink-0"
             />
             <h3 className="text-[14px] font-bold">{t("bacheca")}</h3>
 
-            <button
-              onClick={role === "admin" ? openDrawerAdd : undefined}
-              className={`custom-button ml-auto text-[14px] ${
-                role === "user" ? "invisible pointer-events-none" : ""
-              }`}
-            >
-              + {t("aggiungi")}
-            </button>
-          </div>
+            <div className="ml-auto flex items-center gap-2">
+              <input
+                type="text"
+                placeholder={t("cerca")}
+                value={boardSearchTerm}
+                onChange={(e) => setBoardSearchTerm(e.target.value)}
+                className="table-search dashboard-card-search"
+              />
 
+              {canManageBoard && (
+                <button
+                  onClick={openDrawerAdd}
+                  className="custom-button text-[14px]"
+                >
+                  + {t("aggiungi")}
+                </button>
+              )}
+            </div>
+          </div>
           <Table
+            variant="embedded"
             data={boardPosts}
             columns={boardColumns}
             columnLabels={columnLabels}
-            actionLabel="Actions"
+            showSort={false}
+            showSearch={false}
+            searchTerm={boardSearchTerm}
+            actionLabel={canManageBoard ? t("azioni") : null}
             actions={
-              role === "admin"
+              canManageBoard
                 ? [
                     {
                       name: "edit",
                       icon: (
-                        <NotePencilIcon
-                          size={28}
+                        <PencilSimpleIcon
+                          size={24}
                           color={theme === "dark" ? "white" : "#090c64"}
                           weight="duotone"
-                          className="mr-4"
+                          className="mr-4 preserve-icon-size"
                         />
                       ),
                       onClick: openDrawerEdit,
@@ -233,7 +271,7 @@ const BoardPage = () => {
                       name: "delete",
                       icon: (
                         <TrashIcon
-                          size={28}
+                          size={16}
                           color="#ff0000"
                           weight="duotone"
                         />
@@ -241,43 +279,46 @@ const BoardPage = () => {
                       onClick: handleDelete,
                     },
                   ]
-                : []
+                : null
             }
           />
         </div>
 
         {/* Low stock products */}
         <div
-          className={`flex flex-col gap-4 p-4
-          bg-[#fafafa20] dark:bg-[#fafafa10] backdrop-blur-sm
-          border border-white/30 dark:border-white/80 rounded-xl shadow-md
-          ${textColor}`}
+          className={`app-surface flex flex-col gap-3 p-4 ${textColor}`}
         >
-          <div className="flex items-start gap-4">
-            <ShoppingCartSimpleIcon
-              size={28}
+          <div className="dashboard-card-header flex items-center gap-4">
+            <SirenIcon
+              size={24}
               color={theme === "dark" ? "white" : "#090c64"}
               weight="duotone"
+              className="preserve-icon-size shrink-0"
             />
             <h3 className="text-[14px] font-bold">
               {t("prodottiInEsaurimento")}
             </h3>
 
-            <button
-              onClick={() => navigate("/warehouse")}
-              className="ml-auto custom-button text-[14px]"
-            >
-              {t("vediTutti")}
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => navigate("/warehouse")}
+                className="custom-button text-[14px]"
+              >
+                {t("vediTutti")}
+              </button>
+            </div>
           </div>
 
           <Table
+            variant="embedded"
             data={lowStockProducts.slice(0, 3).map((item) => ({
               name: item.product.name,
               stock: item.stock,
               pos: item.pointOfSales.name,
             }))}
             columns={["name", "stock", "pos"]}
+            showSort={false}
+            showSearch={false}
             columnLabels={{
               name: t("prodotto"),
               stock: t("giacenza"),
@@ -289,21 +330,21 @@ const BoardPage = () => {
 
       {/* Calendar section */}
       <div
-        className="bg-[#fafafa20] dark:bg-[#fafafa20] backdrop-blur-sm
-        border border-white/30 dark:border-white/80
-        rounded-xl p-6 shadow-md flex gap-4 min-h-[700px]"
+        className="app-surface dashboard-calendar-card p-6 flex flex-col gap-4 min-h-[700px]"
       >
-        <CalendarIcon
-          size={28}
-          color={theme === "dark" ? "white" : "#090c64"}
-          weight="duotone"
-        />
-        <div className="flex-1 flex flex-col">
-          <h3 className={`text-[14px] font-bold mb-4 ${textColor}`}>
+        <div className="flex items-center gap-4">
+          <CalendarIcon
+            size={24}
+            color={theme === "dark" ? "white" : "#090c64"}
+            weight="duotone"
+            className="preserve-icon-size shrink-0"
+          />
+          <h3 className={`text-[14px] font-bold ${textColor}`}>
             {t("calendario")}
           </h3>
-          <CalendarBox />
         </div>
+
+        <CalendarBox />
       </div>
 
       {/* Drawer for board events */}
@@ -363,6 +404,31 @@ const BoardPage = () => {
           </form>
         )}
       </Drawer>
+
+      <AppFeedbackModal
+        open={Boolean(eventToDelete)}
+        title={t("modaleAttenzione")}
+        message={
+          eventToDelete
+            ? `${t("seiSicuroEliminareEvento")} "${eventToDelete.title}"?`
+            : ""
+        }
+        tone="warning"
+        onClose={() => setEventToDelete(null)}
+        actions={[
+          {
+            label: t("annulla"),
+            onClick: () => setEventToDelete(null),
+            className: "custom-button-light",
+          },
+          {
+            label: t("elimina"),
+            onClick: confirmDeleteEvent,
+            className:
+              "rounded-xl bg-red-600 px-4 py-2 font-bold text-white shadow-md transition hover:bg-red-700",
+          },
+        ]}
+      />
     </div>
   );
 };

@@ -6,6 +6,54 @@ Built with a modern **Node.js/Express** backend and a scalable **React** fronten
 
 ---
 
+## Platform Preview
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/media/workhub-calendar.png" alt="WorkHub calendar with weekly shifts" />
+      <br />
+      <sub><b>Calendar and shift planning</b></sub>
+    </td>
+    <td width="50%">
+      <img src="docs/media/workhub-customers.png" alt="WorkHub customer registry" />
+      <br />
+      <sub><b>Customer registry</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/media/workhub-employee.png" alt="WorkHub employee profile and weekly shifts" />
+      <br />
+      <sub><b>Employee profile and shifts</b></sub>
+    </td>
+    <td width="50%">
+      <img src="docs/media/workhub-warehouse.png" alt="WorkHub warehouse inventory dashboard" />
+      <br />
+      <sub><b>Warehouse inventory</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/media/workhub-ticketing.png" alt="WorkHub ticketing dashboard" />
+      <br />
+      <sub><b>Ticketing dashboard</b></sub>
+    </td>
+    <td width="50%">
+      <img src="docs/media/workhub-orders.png" alt="WorkHub order management" />
+      <br />
+      <sub><b>Order management</b></sub>
+    </td>
+  </tr>
+</table>
+
+## Demo Videos
+
+- [Authentication demo](docs/media/workhub-demo-1.mp4)
+- [Platform walkthrough](docs/media/workhub-demo-2.mp4)
+
+---
+
 ## Core Features
 
 ### Authentication & Security
@@ -222,5 +270,4 @@ Events are automatically ordered and displayed in both the Event Board and Calen
 - Multi-language support
 
 ---
-
 

@@ -2,6 +2,51 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 // Base API URL
 const API_URL = "http://localhost:3030/api/v1"; // base API url
+const emptyAuth = {
+	user: null,
+	token: null,
+	role: null,
+};
+
+const decodeJwtPayload = (token) => {
+	if (!token) return null;
+
+	const payload = token.split(".")[1];
+	if (!payload) return null;
+
+	const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+	const padded = normalized.padEnd(
+		normalized.length + ((4 - (normalized.length % 4)) % 4),
+		"="
+	);
+
+	return JSON.parse(atob(padded));
+};
+
+export const isTokenExpired = (token) => {
+	try {
+		const payload = decodeJwtPayload(token);
+		return !payload?.exp || Date.now() >= payload.exp * 1000;
+	} catch {
+		return true;
+	}
+};
+
+const getStoredAuth = () => {
+	try {
+		const auth = JSON.parse(sessionStorage.getItem("auth"));
+
+		if (!auth?.token || isTokenExpired(auth.token)) {
+			sessionStorage.removeItem("auth");
+			return emptyAuth;
+		}
+
+		return auth;
+	} catch {
+		sessionStorage.removeItem("auth");
+		return emptyAuth;
+	}
+};
 
 // LOGIN
 // Async thunk for user login, supports 2FA code if provided
@@ -26,7 +71,7 @@ export const loginAsync = createAsyncThunk(
 					role: data.data.user.role,
 				};
 
-				localStorage.setItem("auth", JSON.stringify(authData));
+				sessionStorage.setItem("auth", JSON.stringify(authData));
 				return authData;
 			} else {
 				// login with code required
@@ -157,12 +202,11 @@ export const verify2FAAsync = createAsyncThunk(
 );
 
 // INITIAL STATE
-// Load authentication data from localStorage if present
-const storedAuth = JSON.parse(localStorage.getItem("auth")) || {
-	user: null,
-	token: null,
-	role: null,
-};
+// Auth is kept for the current browser session only.
+localStorage.removeItem("auth");
+localStorage.removeItem("persist:root");
+
+const storedAuth = getStoredAuth();
 
 // Auth slice definition
 const authSlice = createSlice({
@@ -187,8 +231,9 @@ const authSlice = createSlice({
 	},
 
 	reducers: {
-		// Logout reducer: clears localStorage and resets state
+		// Logout reducer: clears browser session auth and resets state
 		logout: (state) => {
+			sessionStorage.removeItem("auth");
 			localStorage.removeItem("auth");
 			localStorage.removeItem("persist:root");
 			state.user = null;

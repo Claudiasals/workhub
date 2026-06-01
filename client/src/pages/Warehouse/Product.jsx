@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 
 import {
-  SignOutIcon,
-  WarehouseIcon,
   NoteIcon,
   PaperclipIcon,
   FilePdfIcon,
@@ -106,84 +104,97 @@ const Product = () => {
   }
 
   return (
-    <div className="w-full min-h-screen flex justify-center items-start p-8">
-      <div className="w-full max-w-[1200px] p-6 flex flex-col gap-8">
+    <div className="w-full min-h-screen">
+      <div className="w-full flex flex-col gap-6">
 
         {/* PRODUCT DETAILS */}
-        <div className="rounded-2xl bg-[#fafafa]/10 backdrop-blur-sm p-6 shadow-md flex flex-col gap-2">
-
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-bold text-3xl">
-              {item.product.name}
-            </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-end">
             <Link
               to="/warehouse"
-              className="w-12 h-12 flex items-center justify-center bg-white/50 rounded-full shadow-md hover:bg-white/70 transition-all"
+              className="inline-flex w-fit text-lg font-bold text-[#090c64] transition hover:underline dark:text-[#8ea2ff]"
             >
-              <SignOutIcon
-                size={32}
-                color={theme === "dark" ? "white" : "#090c64"}
-                weight="duotone"
-              />
+              {"< Torna al magazzino"}
             </Link>
           </div>
 
-          {/* Product info + image */}
-          <div className="grid grid-cols-2 gap-6 items-start">
+          <div className="app-surface p-6 flex flex-col gap-2">
+            {/* Header row */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <span className="font-bold text-lg">
+                {item.product.name}
+              </span>
 
-            {/* Product info */}
-            <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>{t("id")}</span>
-                <span className="break-all">{item._id}</span>
-              </div>
-
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>{t("nomeProdotto")}</span>
-                <span>{item.product.name}</span>
-              </div>
-
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>SKU</span>
-                <span>{item.product.sku}</span>
-              </div>
-
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>{t("categoria")}</span>
-                <span>{item.product.category?.name || "N/D"}</span>
-              </div>
-
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>{t("quantita")}</span>
-                <span>{item.stock}</span>
-              </div>
-
-              <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
-                <span>{t("sogliaRiordino")}</span>
-                <span>{item.stockLimit}</span>
-              </div>
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="custom-button"
+              >
+                <FilePdfIcon
+                  size={18}
+                  color={theme === "dark" ? "#090c64" : "white"}
+                  weight="duotone"
+                />
+                {t("esportaPDF")}
+              </button>
             </div>
 
-            {/* Product image */}
-            <div className="flex items-center justify-center">
-              {item.product?.image ? (
-                <img
-                  src={item.product.image}
-                  alt={item.product.name}
-                  className="max-h-80 object-contain rounded-2xl shadow-md bg-white/30"
-                />
-              ) : (
-                <div className="w-full h-80 rounded-2xl bg-white/30 flex items-center justify-center shadow-md">
-                  {t("nessunaImmagine")}
+            {/* Product info + image */}
+            <div className="grid grid-cols-2 gap-6 items-start">
+
+              {/* Product info */}
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>{t("id")}</span>
+                  <span className="break-all">{item._id}</span>
                 </div>
-              )}
+
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>{t("nomeProdotto")}</span>
+                  <span>{item.product.name}</span>
+                </div>
+
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>SKU</span>
+                  <span>{item.product.sku}</span>
+                </div>
+
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>{t("categoria")}</span>
+                  <span>{item.product.category?.name || "N/D"}</span>
+                </div>
+
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>{t("quantita")}</span>
+                  <span>{item.stock}</span>
+                </div>
+
+                <div className="grid grid-cols-2 bg-white/40 rounded-lg p-2 shadow-sm">
+                  <span>{t("sogliaRiordino")}</span>
+                  <span>{item.stockLimit}</span>
+                </div>
+              </div>
+
+              {/* Product image */}
+              <div className="flex items-center justify-center">
+                {item.product?.image ? (
+                  <img
+                    src={item.product.image}
+                    alt={item.product.name}
+                    className="max-h-80 object-contain rounded-2xl shadow-md bg-white/30"
+                  />
+                ) : (
+                  <div className="w-full h-80 rounded-2xl bg-white/30 flex items-center justify-center shadow-md">
+                    {t("nessunaImmagine")}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* NOTES & ATTACHMENTS */}
-        <div className="rounded-2xl bg-[#fafafa]/10 backdrop-blur-sm p-6 shadow-md">
+        <div className="app-surface p-6">
           <div className="flex items-center gap-2 mb-4">
             <NoteIcon
               size={32}
@@ -210,43 +221,6 @@ const Product = () => {
             <input type="file" hidden />
             {t("scegliFile")}
           </label>
-        </div>
-
-        {/* AVAILABILITY & ACTIONS */}
-        <div className="flex gap-4">
-
-          {/* Availability */}
-          <div className="flex-1 rounded-2xl bg-[#fafafa]/10 backdrop-blur-sm p-6 shadow-md">
-            <div className="flex items-center gap-2 mb-4">
-              <WarehouseIcon
-                size={32}
-                color={theme === "dark" ? "white" : "#090c64"}
-                weight="duotone"
-              />
-              <h3 className="text-[#090c64] text-lg font-bold">
-                {t("disponibilita")}
-              </h3>
-            </div>
-
-            <div className="bg-white/40 rounded-xl p-3 shadow-sm">
-              {item.stock} {t("pezzi")}
-            </div>
-          </div>
-
-          {/* Export PDF */}
-          <div className="flex-1 flex items-center justify-center">
-            <button
-              onClick={handleExportPDF}
-              className="bg-[#fafafa]/50 font-semibold px-6 py-3 rounded-xl shadow-md hover:bg-white/80 transition-all flex items-center gap-2"
-            >
-              <FilePdfIcon
-                size={28}
-                color={theme === "dark" ? "white" : "#090c64"}
-                weight="duotone"
-              />
-              {t("esportaPDF")}
-            </button>
-          </div>
         </div>
 
       </div>

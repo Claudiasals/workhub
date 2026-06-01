@@ -1,64 +1,83 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import { createTicketAsync, fetchTickets, selectTickets } from "../../store/feature/ticketSlice";
+import AppFeedbackModal from "../../components/AppFeedbackModal";
+import Drawer from "../../components/Drawer";
+import {
+  createTicketAsync,
+  fetchTickets,
+  selectTickets,
+} from "../../store/feature/ticketSlice";
 import { useLanguage } from "../../context/LanguageContext";
 
-/*
-  TicketCreator
-  -------------
-  Component responsible for:
-  - Creating a new support ticket
-  - Showing feedback (error / success / loading)
-  - Listing tickets belonging to the authenticated user
-*/
+const getDemoUserTickets = (authUser) => {
+  const demoUserId = authUser?._id || authUser?.id || "demo-current-user";
+  const now = new Date();
+
+  return [
+    {
+      _id: "demo-user-ticket-1",
+      name: "Richiesta cambio turno",
+      status: "open",
+      user: demoUserId,
+      createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+      updatedAt: new Date(now.getTime() - 1000 * 60 * 60 * 24).toISOString(),
+    },
+    {
+      _id: "demo-user-ticket-2",
+      name: "Problema accesso area magazzino",
+      status: "closed",
+      user: demoUserId,
+      createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 8).toISOString(),
+      updatedAt: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 6).toISOString(),
+    },
+  ];
+};
+
 const TicketCreator = ({ user }) => {
   const dispatch = useDispatch();
   const { t } = useLanguage();
 
-  /* REDUX STATE */
   const authUser = useSelector((state) => state.auth.user);
   const tickets = useSelector(selectTickets);
   const creatorStatus = useSelector((state) => state.tickets.status);
 
-  /* LOCAL STATE */
   const [title, setTitle] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
 
-  /* LOAD USER TICKETS */
   useEffect(() => {
     if (authUser) {
       dispatch(fetchTickets());
     }
   }, [dispatch, authUser]);
 
-  /* AUTO CLEAR SUCCESS */
-  useEffect(() => {
-    if (!success) return;
-    const timer = setTimeout(() => setSuccess(""), 3000);
-    return () => clearTimeout(timer);
-  }, [success]);
-
-  /* FILTER TICKETS BY USER */
   const filteredTickets = useMemo(() => {
     const userId = authUser?._id || authUser?.id;
     if (!userId || !tickets) return [];
 
     return tickets.filter(
-      (t) =>
-        t.user === userId ||
-        t.user?._id === userId ||
-        t.user?.id === userId
+      (ticket) =>
+        ticket.user === userId ||
+        ticket.user?._id === userId ||
+        ticket.user?.id === userId
     );
   }, [tickets, authUser]);
 
-  /* CREATE TICKET HANDLER */
+  const visibleTickets = useMemo(() => {
+    if (filteredTickets.length > 0 || creatorStatus === "loading") {
+      return filteredTickets;
+    }
+
+    return getDemoUserTickets(authUser);
+  }, [filteredTickets, creatorStatus, authUser]);
+
   const handleCreateTicket = async () => {
     const trimmedTitle = title.trim();
 
-    // Basic validation
     if (trimmedTitle.length < 3) {
       setError(t("titoloMinimo"));
       return;
@@ -87,7 +106,8 @@ const TicketCreator = ({ user }) => {
       const result = await dispatch(createTicketAsync(payload)).unwrap();
 
       setTitle("");
-      setSuccess(`✓ ${t("ticketCreato")}: "${result.name}"`);
+      setSuccess(`"${result.name}"`);
+      setTicketDrawerOpen(false);
       dispatch(fetchTickets());
     } catch (err) {
       let message = t("erroreCreazioneTicket");
@@ -105,120 +125,206 @@ const TicketCreator = ({ user }) => {
     }
   };
 
-  /* SORT TICKETS (LATEST FIRST) */
   const sortedTickets = useMemo(() => {
-    return [...filteredTickets].sort((a, b) => {
+    return [...visibleTickets].sort((a, b) => {
       const da = new Date(a.updatedAt || a.createdAt || 0);
       const db = new Date(b.updatedAt || b.createdAt || 0);
       return db - da;
     });
-  }, [filteredTickets]);
+  }, [visibleTickets]);
+
+  const searchedTickets = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return sortedTickets;
+
+    return sortedTickets.filter((ticket) =>
+      String(ticket.name || "")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [sortedTickets, searchTerm]);
+
+  const openTickets = useMemo(
+    () => searchedTickets.filter((ticket) => ticket.status !== "closed"),
+    [searchedTickets]
+  );
+
+  const closedTickets = useMemo(
+    () => searchedTickets.filter((ticket) => ticket.status === "closed"),
+    [searchedTickets]
+  );
+
+  const openCreateDrawer = () => {
+    setError("");
+    setTitle("");
+    setTicketDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setTicketDrawerOpen(false);
+    setError("");
+  };
+
+  const renderTicketList = (items, emptyText) => {
+    if (items.length === 0) {
+      return <p className="text-sm opacity-70">{emptyText}</p>;
+    }
+
+    return (
+      <ul className="flex flex-col gap-2">
+        {items.map((ticket) => {
+          const isClosed = ticket.status === "closed";
+
+          return (
+            <li
+              key={ticket._id || ticket.id}
+              className="ticket-list-card rounded-xl p-2 flex justify-between items-start gap-3"
+            >
+              <div>
+                <div className="text-sm font-semibold">
+                  {ticket.name}
+                </div>
+                <div className="text-xs opacity-70">
+                  {new Date(
+                    ticket.updatedAt || ticket.createdAt
+                  ).toLocaleString()}
+                </div>
+              </div>
+
+              <span
+                className={`ticket-status-pill text-xs px-2 py-1 rounded-xl font-semibold shrink-0 ${
+                  isClosed ? "is-closed" : "is-open"
+                }`}
+              >
+                {isClosed ? t("risolto") : t("aperto")}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
 
   return (
-    <div className="custom-box p-4 w-full">
+    <>
+      <div className="custom-box p-4 w-full ticket-page">
+        <div className="table-toolbar ticket-page-toolbar">
+          <div className="table-toolbar-left">
+            <h2 className="table-toolbar-title">{t("ticket")}</h2>
+          </div>
 
-      {/* TITLE */}
-      <h2 className="font-bold text-xl mb-4">
-        {t("creaTicket")}
-      </h2>
+          <div className="table-toolbar-search">
+            <input
+              type="text"
+              placeholder={t("cerca")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="table-search"
+            />
+          </div>
 
-      {/* TICKET TITLE INPUT */}
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) =>
-          e.key === "Enter" && !isLoading && handleCreateTicket()
-        }
-        placeholder={t("titoloTicket")}
-        disabled={isLoading}
-        maxLength={100}
-      />
-
-      {/* ERROR MESSAGE */}
-      {error && (
-        <div className="mt-3 p-2 rounded-xl bg-red-500 text-white text-sm flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError("")}>✕</button>
+          <div className="table-toolbar-right">
+            <button
+              type="button"
+              onClick={openCreateDrawer}
+              className="custom-button shrink-0"
+            >
+              {t("apriTicket")}
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* SUCCESS MESSAGE */}
-      {success && (
-        <div className="mt-3 p-2 rounded-xl bg-green-500 text-white text-sm">
-          {success}
-        </div>
-      )}
-
-      {/* CREATE BUTTON */}
-      <button
-        onClick={handleCreateTicket}
-        disabled={isLoading || !title.trim()}
-        className="custom-button w-full mt-4"
-      >
-        {isLoading ? t("creando") : `+ ${t("richiediTicket")}`}
-      </button>
-
-      {/* SYNC STATUS */}
-      {creatorStatus === "loading" && (
-        <div className="mt-3 text-sm opacity-70">
-          {t("sincronizzazioneInCorso")}
-        </div>
-      )}
-
-      {/* CHARACTER COUNTER */}
-      <div className="mt-2 text-xs opacity-70 text-right">
-        {title.length}/100 {t("caratteri")}
-      </div>
-
-      {/*USER TICKETS LIST */}
-      <div className="mt-6">
-        <h3 className="font-semibold mb-2">
-          {t("iTuoiTicket")}
-        </h3>
-
-        {sortedTickets.length === 0 ? (
-          <p className="text-sm opacity-70">
-            {t("nessunTicket")}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2 max-h-[480px] overflow-auto">
-            {sortedTickets.map((ticket) => {
-              const status = ticket.status;
-              const isClosed = status === "closed";
-
-              return (
-                <li
-                  key={ticket._id || ticket.id}
-                  className="bg-white/60 rounded-xl p-2 flex justify-between items-start"
-                >
-                  <div>
-                    <div className="text-sm font-semibold">
-                      {ticket.name}
-                    </div>
-                    <div className="text-xs opacity-70">
-                      {new Date(
-                        ticket.updatedAt || ticket.createdAt
-                      ).toLocaleString()}
-                    </div>
-                  </div>
-
-                  <span
-                    className={`text-xs px-2 py-1 rounded-xl font-semibold ${
-                      isClosed
-                        ? "bg-[#FFD580] text-[#663c00]"
-                        : "bg-[#A3B8E0] text-[#06234a]"
-                    }`}
-                  >
-                    {isClosed ? t("risolto") : t("aperto")}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+        {creatorStatus === "loading" && (
+          <div className="mt-3 text-sm opacity-70">
+            {t("sincronizzazioneInCorso")}
+          </div>
         )}
+
+        <div className="ticket-page-list">
+          {searchedTickets.length === 0 ? (
+            <p className="text-sm opacity-70">{t("nessunTicket")}</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section className="flex flex-col gap-2">
+                <h4 className="text-sm font-semibold">{t("aperti")}</h4>
+                {renderTicketList(openTickets, t("nessunTicketAperto"))}
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h4 className="text-sm font-semibold">{t("chiusi")}</h4>
+                {renderTicketList(closedTickets, t("nessunTicketChiuso"))}
+              </section>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <Drawer
+        open={ticketDrawerOpen}
+        onClose={closeDrawer}
+        title={t("apriTicket")}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isLoading) handleCreateTicket();
+          }}
+          className="flex flex-col gap-4"
+        >
+          <label className="drawer-label">{t("titoloTicket")}</label>
+
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t("titoloTicket")}
+            disabled={isLoading}
+            maxLength={100}
+            className="drawer-search"
+          />
+
+          <div className="text-xs opacity-70 text-right">
+            {title.length}/100 {t("caratteri")}
+          </div>
+
+          {error && (
+            <div className="p-2 rounded-xl bg-red-500 text-white text-sm flex justify-between">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError("")}>
+                x
+              </button>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeDrawer}
+              className="custom-button-light"
+            >
+              {t("annulla")}
+            </button>
+
+            <button
+              type="submit"
+              disabled={isLoading || !title.trim()}
+              className="custom-button disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? t("creando") : t("apriTicket")}
+            </button>
+          </div>
+        </form>
+      </Drawer>
+
+      <AppFeedbackModal
+        open={Boolean(success)}
+        title={t("ticketCreato")}
+        message={success}
+        tone="success"
+        closeLabel={t("chiudi")}
+        onClose={() => setSuccess("")}
+      />
+    </>
   );
 };
 

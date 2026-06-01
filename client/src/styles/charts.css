@@ -1,4 +1,24 @@
 /* ===== MUI CHARTS TOOLTIP DARK MODE ===== */
+.dark .MuiChartsAxis-root text,
+.dark .MuiChartsAxis-tickLabel,
+.dark .MuiChartsAxis-label,
+.dark .MuiChartsLegend-root text,
+.dark .MuiChartsLegend-label,
+.dark .MuiChartsLegend-series text,
+.dark .MuiCharts-root text {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.dark .MuiChartsAxis-line,
+.dark .MuiChartsAxis-tick {
+  stroke: #ffffff !important;
+}
+
+.dark .MuiChartsGrid-line {
+  stroke: rgba(255,255,255,0.16) !important;
+}
+
 .MuiChartsTooltip-root {
   font-family: var(--font-nunito), 'Nunito', sans-serif !important;
   background-color: #ffffff !important;

@@ -49,10 +49,7 @@ const Sidebar = () => {
   };
 
   return (
-    <nav
-      className={`flex flex-col gap-14 items-stretch w-full h-full 
-        px-3 py-4 transition-all duration-300 mt-20`}
-    >
+    <nav className="sidebar-nav flex flex-col gap-12 items-stretch w-full px-3 transition-all duration-300">
       {routes.map((item) => {
         const active = isRouteActive(item.to);
 
@@ -63,14 +60,15 @@ const Sidebar = () => {
             className={`
               relative flex items-center justify-center text-center font-bold text-[16px] 
               tracking-wide py-1 rounded-xl mx-2 select-none
+              border-2 border-transparent transition-transform duration-200 ease-out
               ${
                 active
                   ? theme === "dark"
-                    ? "border-violet-500/60 border-2 text-white scale-105"
-                    : "border-violet-500/60 border-2 bg-white scale-105 text-[#090c64]"
+                    ? "bg-white/10 border-white/80 text-white scale-105 shadow-md"
+                    : "border-violet-500/60 bg-white scale-105 text-[#090c64]"
                   : theme === "dark"
-                  ? "bg-violet/60 text-[white]/80 hover:bg-violet/40"
-                  : "text-white hover:border-2 hover:border-violet-400/20"
+                  ? "text-white/80 hover:bg-white/10 hover:scale-[1.04]"
+                  : "text-white hover:scale-[1.04]"
               }
             `}
           >

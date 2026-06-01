@@ -5,9 +5,10 @@ import * as api from "../../api/itemsApi.js";
 // Fetch all items
 export const fetchItems = createAsyncThunk(
   "items/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const data = await api.fetchItems();
+      const token = getState().auth.token;
+      const data = await api.fetchItems(token);
       return data;
     } catch (err) {
       return rejectWithValue(err.message);
@@ -20,7 +21,7 @@ export const updateItemQuantity = createAsyncThunk(
   "items/updateItemQuantity",
   async ({ id, quantityToAdd }, { rejectWithValue }) => {
     try {
-      const token = JSON.parse(localStorage.getItem("auth"))?.token;
+      const token = JSON.parse(sessionStorage.getItem("auth"))?.token;
 
       const res = await fetch(`${API_URL}/items/${id}/quantity`, {
         method: "PATCH",
@@ -80,10 +81,12 @@ const itemsSlice = createSlice({
       // Fetch items
       .addCase(fetchItems.pending, (state) => {
         state.status = "loading";
+        state.error = null;
       })
       .addCase(fetchItems.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.list = action.payload;
+        state.error = null;
       })
       .addCase(fetchItems.rejected, (state, action) => {
         state.status = "failed";

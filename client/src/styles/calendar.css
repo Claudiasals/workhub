@@ -1,8 +1,117 @@
 /* Calendarbox — react-big-calendar dark mode override */
+/* Dashboard calendar panel */
+.dashboard-calendar-card {
+  border-radius: 0.75rem;
+  background-clip: padding-box;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.dashboard-calendar-card .calendar-rbc-wrap {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: transparent;
+}
+
+.dashboard-calendar-card .rbc-calendar {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+.dashboard-calendar-card .rbc-time-view,
+.dashboard-calendar-card .rbc-month-view,
+.dashboard-calendar-card .rbc-agenda-view {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+.dashboard-calendar-card .rbc-time-header,
+.dashboard-calendar-card .rbc-time-header-content,
+.dashboard-calendar-card .rbc-time-header-cell,
+.dashboard-calendar-card .rbc-time-content,
+.dashboard-calendar-card .rbc-timeslot-group,
+.dashboard-calendar-card .rbc-time-column,
+.dashboard-calendar-card .rbc-day-slot,
+.dashboard-calendar-card .rbc-events-container,
+.dashboard-calendar-card .rbc-time-gutter,
+.dashboard-calendar-card .rbc-time-header-gutter,
+.dashboard-calendar-card .rbc-allday-cell,
+.dashboard-calendar-card .rbc-month-row,
+.dashboard-calendar-card .rbc-row-bg,
+.dashboard-calendar-card .rbc-row-content,
+.dashboard-calendar-card .rbc-day-bg {
+  background: transparent !important;
+}
+
+.dashboard-calendar-card .rbc-off-range-bg {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.dark .dashboard-calendar-card .rbc-time-view,
+.dark .dashboard-calendar-card .rbc-month-view,
+.dark .dashboard-calendar-card .rbc-agenda-view {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.dark .dashboard-calendar-card .rbc-calendar,
+.dark .dashboard-calendar-card .rbc-time-header,
+.dark .dashboard-calendar-card .rbc-time-header-content,
+.dark .dashboard-calendar-card .rbc-time-header-cell,
+.dark .dashboard-calendar-card .rbc-time-content,
+.dark .dashboard-calendar-card .rbc-timeslot-group,
+.dark .dashboard-calendar-card .rbc-time-column,
+.dark .dashboard-calendar-card .rbc-day-slot,
+.dark .dashboard-calendar-card .rbc-events-container,
+.dark .dashboard-calendar-card .rbc-time-gutter,
+.dark .dashboard-calendar-card .rbc-time-header-gutter,
+.dark .dashboard-calendar-card .rbc-allday-cell,
+.dark .dashboard-calendar-card .rbc-month-row,
+.dark .dashboard-calendar-card .rbc-row-bg,
+.dark .dashboard-calendar-card .rbc-row-content,
+.dark .dashboard-calendar-card .rbc-day-bg {
+  background: transparent !important;
+}
+
+.dark .dashboard-calendar-card .rbc-off-range-bg {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
 /* Wrapper calendario */
 .dark .rbc-calendar {
   background-color: rgba(255, 255, 255, 0.05);
   color: white !important;
+}
+
+.dark .dashboard-calendar-card .rbc-calendar {
+  background-color: transparent !important;
+  color: white !important;
+}
+
+.dashboard-calendar-card .rbc-time-view,
+.dashboard-calendar-card .rbc-time-content,
+.dashboard-calendar-card .rbc-time-header,
+.dashboard-calendar-card .rbc-time-header-content,
+.dashboard-calendar-card .rbc-time-gutter,
+.dashboard-calendar-card .rbc-time-header-gutter {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.dark .dashboard-calendar-card .rbc-time-view,
+.dark .dashboard-calendar-card .rbc-time-content,
+.dark .dashboard-calendar-card .rbc-time-header,
+.dark .dashboard-calendar-card .rbc-time-header-content,
+.dark .dashboard-calendar-card .rbc-time-gutter,
+.dark .dashboard-calendar-card .rbc-time-header-gutter {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 /* Testo generale — esclusi i bottoni custom */
@@ -13,13 +122,19 @@
 
 /* Toolbar custom wrapper */
 .calendar-toolbar {
-  @apply px-6 py-3 my-5 rounded-xl backdrop-blur-md shadow-md border flex justify-between items-center;
-  background: rgba(255,255,255,0.20);
+  @apply px-4 py-3 my-3 rounded-xl border flex justify-between items-center;
+  background: rgba(250, 250, 250, 0.125);
+  border-color: rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .dark .calendar-toolbar {
-  background: rgba(255,255,255,0.08) !important;
-  border-color: rgba(255,255,255,0.1) !important;
+  background: rgba(250, 250, 250, 0.063) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
 }
 
 /* Header settimana/giorno */

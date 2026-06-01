@@ -1,12 +1,11 @@
 import { useTheme } from "../../../context/ThemeContext";
 import { useLanguage } from "../../../context/LanguageContext";
 import {
-  UserCircleIcon,
   CalendarCheckIcon,
   BagIcon,
   CalendarBlankIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import Drawer from "../../../components/Drawer";
@@ -34,6 +33,38 @@ const StatusDot = ({ status }) => {
   );
 };
 
+const DEMO_FERIE_REQUESTS = [
+  {
+    from: "2026-06-10",
+    to: "2026-06-14",
+    hours: 40,
+    status: "approved",
+  },
+  {
+    from: "2026-07-22",
+    to: "2026-07-23",
+    hours: 16,
+    status: "pending",
+  },
+];
+
+const DEMO_PERMESSI_REQUESTS = [
+  {
+    from: "2026-05-30",
+    timeFrom: "09:00",
+    timeTo: "11:00",
+    hours: 2,
+    status: "approved",
+  },
+  {
+    from: "2026-06-06",
+    timeFrom: "15:00",
+    timeTo: "18:00",
+    hours: 3,
+    status: "pending",
+  },
+];
+
 const UserEmployeePage = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -42,6 +73,9 @@ const UserEmployeePage = () => {
   /* REDUX STATE */
   const authUser = useSelector((state) => state.auth.user);
   const token = useSelector((state) => state.auth.token);
+  const selectedUser = useSelector((state) => state.users.selected);
+  const profileUser =
+    selectedUser?._id === authUser?._id ? selectedUser : authUser;
   const { list: pointsOfSale = [] } = useSelector((state) => state.pos || {});
   const {
     current: userShifts,
@@ -77,41 +111,41 @@ const UserEmployeePage = () => {
 
   /* WORKPLACE LABEL */
   useEffect(() => {
-    if (!authUser?.workplace) return setWorkplaceName("");
+    if (!profileUser?.workplace) return setWorkplaceName("");
 
-    if (typeof authUser.workplace === "string") {
-      const found = pointsOfSale.find((p) => p._id === authUser.workplace);
+    if (typeof profileUser.workplace === "string") {
+      const found = pointsOfSale.find((p) => p._id === profileUser.workplace);
       setWorkplaceName(
         found
           ? `${found.name} – ${found.location?.city || ""}`
-          : authUser.workplace
+          : profileUser.workplace
       );
     } else {
       setWorkplaceName(
-        `${authUser.workplace.name} – ${
-          authUser.workplace.location?.city || ""
+        `${profileUser.workplace.name} – ${
+          profileUser.workplace.location?.city || ""
         }`
       );
     }
-  }, [authUser, pointsOfSale]);
+  }, [profileUser, pointsOfSale]);
 
   /* EMPLOYEE DATA */
   const anagrafica = useMemo(() => {
-    if (!authUser) return null;
+    if (!profileUser) return null;
 
     return {
-      nome: `${authUser.firstName || ""} ${authUser.lastName || ""}`.trim(),
-      ruolo: authUser.department || "",
-      matricola: authUser.personnelNumber ?? "",
-      email: authUser.email || "",
-      telefono: authUser.phone || "",
+      nome: `${profileUser.firstName || ""} ${profileUser.lastName || ""}`.trim(),
+      ruolo: profileUser.department || "",
+      matricola: profileUser.personnelNumber ?? "",
+      email: profileUser.email || "",
+      telefono: profileUser.phone || "",
       sede: workplaceName,
-      contratto: authUser.contractType || "",
-      assunzione: authUser.hireDate
-        ? new Date(authUser.hireDate).toLocaleDateString("it-IT")
+      contratto: profileUser.contractType || "",
+      assunzione: profileUser.hireDate
+        ? new Date(profileUser.hireDate).toLocaleDateString("it-IT")
         : "",
     };
-  }, [authUser, workplaceName]);
+  }, [profileUser, workplaceName]);
 
   /* WEEK DAYS */
   const weekDays = [
@@ -147,10 +181,16 @@ const UserEmployeePage = () => {
   }, [userShifts, weekDays]);
 
   /* LEAVE LISTS */
-  const ferieList =
+  const realFerieList =
     leave?.requestedHours?.filter((r) => r.mode === "vacation") || [];
-  const permessiList =
+  const realPermessiList =
     leave?.requestedHours?.filter((r) => r.mode === "leave") || [];
+  const ferieList = realFerieList.length
+    ? realFerieList
+    : DEMO_FERIE_REQUESTS;
+  const permessiList = realPermessiList.length
+    ? realPermessiList
+    : DEMO_PERMESSI_REQUESTS;
 
   /* HELPERS */
   const formatDate = (date) => {
@@ -219,12 +259,15 @@ const UserEmployeePage = () => {
   };
 
   /* GUARD */
-  if (!token || !authUser) return null;
+  if (!token || !profileUser) return null;
 
   return (
-    <div className="adminEmployee w-full h-full flex flex-col gap-8 p-4 overflow-y-auto">
+    <div
+      data-page-scroll
+      className="adminEmployee w-full h-full flex flex-col gap-6 overflow-y-auto"
+    >
       {/* TOP STATS */}
-      <section className="grid grid-cols-3 gap-6">
+      <section className="employee-stats-grid">
         {[
           {
             label: t("giorniLavorati"),
@@ -233,39 +276,37 @@ const UserEmployeePage = () => {
           },
           {
             label: t("ferieResidue"),
-            value: leave?.vacationHours ?? 0,
+            value: leaveLoading ? "..." : leave?.vacationHours ?? 0,
             icon: BagIcon,
           },
           {
             label: t("permessiResidui"),
-            value: leave?.leaveHours ?? 0,
+            value: leaveLoading ? "..." : leave?.leaveHours ?? 0,
             icon: CalendarBlankIcon,
           },
         ].map(({ label, value, icon: Icon }, i) => (
-          <div key={i} className="custom-box flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Icon
-                size={28}
-                weight="duotone"
-                color={theme === "dark" ? "white" : "#090c64"}
-              />
-              <span className="font-bold">{label}</span>
-            </div>
-            <span className="text-sm opacity-70 font-semibold">{value}</span>
+          <div
+            key={i}
+            className="custom-box page-info-box"
+          >
+            <span className="employee-stat-label">
+              {createElement(Icon, {
+                size: 24,
+                weight: "duotone",
+                color: theme === "dark" ? "white" : "#090c64",
+              })}
+              <span>{label}</span>
+            </span>
+            <span className="employee-stat-value font-semibold">{value}</span>
           </div>
         ))}
       </section>
 
       {/* PROFILE + SHIFTS */}
-      <div className="flex gap-6">
+      <div className="employee-two-column">
         {/* PROFILE */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <UserCircleIcon
-              size={32}
-              weight="duotone"
-              color={theme === "dark" ? "white" : "#090c64"}
-            />
+        <div className="custom-box p-6">
+          <div className="mb-4">
             <h2>{t("anagrafica")}</h2>
           </div>
 
@@ -279,13 +320,8 @@ const UserEmployeePage = () => {
         </div>
 
         {/* SHIFTS */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <CalendarCheckIcon
-              size={32}
-              weight="duotone"
-              color={theme === "dark" ? "white" : "#090c64"}
-            />
+        <div className="custom-box p-6">
+          <div className="mb-4">
             <h2>{t("turniSettimanali")}</h2>
           </div>
 
@@ -303,7 +339,7 @@ const UserEmployeePage = () => {
             {existingShifts.map((s, i) => (
               <div
                 key={i}
-                className="flex justify-between bg-white/40 rounded-xl p-2"
+                className="employee-shift-row bg-white/40 rounded-xl p-2"
               >
                 <span className="font-semibold">{s.day}</span>
                 <span>{s.hours}</span>
@@ -314,28 +350,28 @@ const UserEmployeePage = () => {
       </div>
 
       {/* LEAVE REQUESTS */}
-      <div className="flex gap-6">
+      <div className="employee-two-column">
         {/* VACATION */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="custom-box p-6">
+          <div className="employee-card-header mb-4">
             <h2>{t("ferie")}</h2>
             <button
               className="custom-button"
               onClick={() => setOpenFerieDrawer(true)}
             >
-              {t("richiestaFerie")}
+              {t("richiediFerie")}
             </button>
           </div>
 
           {ferieList.map((f, i) => (
             <div
               key={i}
-              className="flex justify-between bg-white/40 rounded-xl p-2 mb-2"
+              className="employee-request-row bg-white/40 rounded-xl p-2 mb-2"
             >
               <span className="font-semibold">
                 {formatDate(f.from)} – {formatDate(f.to)}
               </span>
-              <div className="flex items-center gap-4">
+              <div className="employee-request-actions">
                 <span>{f.hours}h</span>
                 <StatusDot status={f.status} />
               </div>
@@ -344,24 +380,24 @@ const UserEmployeePage = () => {
         </div>
 
         {/* PERMISSIONS */}
-        <div className="flex-1 custom-box p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="custom-box p-6">
+          <div className="employee-card-header mb-4">
             <h2>{t("permessi")}</h2>
             <button
               className="custom-button"
               onClick={() => setOpenPermessiDrawer(true)}
             >
-              {t("richiestaPermessi")}
+              {t("richiediPermesso")}
             </button>
           </div>
 
           {permessiList.map((p, i) => (
             <div
               key={i}
-              className="flex justify-between bg-white/40 rounded-xl p-2 mb-2"
+              className="employee-request-row bg-white/40 rounded-xl p-2 mb-2"
             >
               <span className="font-semibold">{formatDate(p.from)}</span>
-              <div className="flex items-center gap-4">
+              <div className="employee-request-actions">
                 <span>
                   {p.timeFrom} – {p.timeTo}
                 </span>
@@ -399,7 +435,7 @@ const UserEmployeePage = () => {
             value={permessoData}
             onChange={(e) => setPermessoData(e.target.value)}
           />
-          <div className="flex gap-4">
+          <div className="employee-time-fields">
             <input
               type="time"
               value={oraInizio}

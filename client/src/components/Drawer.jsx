@@ -37,7 +37,7 @@ const Drawer = ({ open, onClose, title, children, width = "w-[420px]" }) => {
       <aside
         className={`drawer-panel ${width}`}
         style={{
-          backgroundImage: `url(${theme === "dark" ? bgDark : bgLight})`,
+          "--drawer-bg-image": `url(${theme === "dark" ? bgDark : bgLight})`,
         }}
         role="dialog"
         aria-modal="true"

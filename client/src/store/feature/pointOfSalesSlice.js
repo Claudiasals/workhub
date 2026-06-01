@@ -5,13 +5,20 @@ import {
   updatePointOfSaleRequest,
   deletePointOfSaleRequest,
 } from "../../api/pointsApi";
+import { logout } from "./authSlice";
+
+const sessionExpiredMessage = "Sessione scaduta. Effettua di nuovo il login.";
 
 // Fetch all points of sale
 export const fetchPointsOfSalesAsync = createAsyncThunk(
   "points/fetchAll",
-  async ({ token }, { rejectWithValue }) => {
+  async ({ token }, { dispatch, rejectWithValue }) => {
     try {
       const { res, data } = await fetchPointsOfSalesRequest({ token });
+      if (res.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!res.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -23,9 +30,13 @@ export const fetchPointsOfSalesAsync = createAsyncThunk(
 // Create a new point of sale
 export const createPointOfSaleAsync = createAsyncThunk(
   "points/create",
-  async ({ newPos, token }, { rejectWithValue }) => {
+  async ({ newPos, token }, { dispatch, rejectWithValue }) => {
     try {
       const { res, data } = await createPointOfSaleRequest({ newPos, token });
+      if (res.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!res.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -37,13 +48,17 @@ export const createPointOfSaleAsync = createAsyncThunk(
 // Update an existing point of sale
 export const updatePointOfSaleAsync = createAsyncThunk(
   "points/update",
-  async ({ id, updates, token }, { rejectWithValue }) => {
+  async ({ id, updates, token }, { dispatch, rejectWithValue }) => {
     try {
       const { res, data } = await updatePointOfSaleRequest({
         id,
         updates,
         token,
       });
+      if (res.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!res.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -55,9 +70,13 @@ export const updatePointOfSaleAsync = createAsyncThunk(
 // Delete a point of sale
 export const deletePointOfSaleAsync = createAsyncThunk(
   "points/delete",
-  async ({ id, token }, { rejectWithValue }) => {
+  async ({ id, token }, { dispatch, rejectWithValue }) => {
     try {
       const { res, data } = await deletePointOfSaleRequest({ id, token });
+      if (res.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!res.ok) return rejectWithValue(data.message);
       return id;
     } catch {

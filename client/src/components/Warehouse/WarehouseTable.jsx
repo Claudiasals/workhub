@@ -11,6 +11,13 @@ import {
   toggleLowStockFilter,
 } from "../../store/feature/warehouseFiltersSlice";
 
+const getItemStock = (item) =>
+  Number(item.stock?.["Mia Sede"] ?? item.stock ?? 0);
+
+const getItemStockLimit = (item) => Number(item.stockLimit ?? 0);
+
+const isLowStockItem = (item) => getItemStock(item) <= getItemStockLimit(item);
+
 const WarehouseTable = ({ data, allItems, columns }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -107,9 +114,7 @@ const WarehouseTable = ({ data, allItems, columns }) => {
     }
 
     if (lowStockFilter) {
-      result = result.filter(
-        (p) => (p.stock?.["Mia Sede"] || p.stock || 0) < 15
-      );
+      result = result.filter(isLowStockItem);
     }
 
     if (sortAZ) {
@@ -134,56 +139,63 @@ const WarehouseTable = ({ data, allItems, columns }) => {
   return (
     <div className="warehouse-wrapper">
       <div className="warehouse-toolbar">
-        <h2 className="text-lg font-bold">
-          {t("magazzino")}
-        </h2>
+        <div className="warehouse-toolbar-left">
+          <h2 className="text-lg font-bold">
+            {t("magazzino")}
+          </h2>
 
-        <button
-          onClick={() => dispatch(toggleSortAZ())}
-          className="custom-button text-sm"
-        >
-          {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
-        </button>
+          <button
+            onClick={() => dispatch(toggleSortAZ())}
+            className="custom-button text-sm"
+          >
+            {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
+          </button>
 
-        <select
-          value={selectedCategory}
-          onChange={(e) =>
-            dispatch(setSelectedCategory(e.target.value))
-          }
-          className="custom-button text-sm focus:outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          <select
+            value={selectedCategory}
+            onChange={(e) =>
+              dispatch(setSelectedCategory(e.target.value))
+            }
+            className="custom-button text-sm focus:outline-none"
+          >
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <input
-          type="text"
-          placeholder={t("cercaIdNomeProdotto")}
-          value={searchTerm}
-          onChange={(e) =>
-            dispatch(setSearchTerm(e.target.value))
-          }
-          className="warehouse-search"
-        />
+        <div className="warehouse-toolbar-search">
+          <input
+            type="text"
+            placeholder={t("cercaIdNomeProdotto")}
+            value={searchTerm}
+            onChange={(e) =>
+              dispatch(setSearchTerm(e.target.value))
+            }
+            className="warehouse-search"
+          />
+        </div>
 
-        <button
-          onClick={() => dispatch(toggleLowStockFilter())}
-          className="custom-button text-sm"
-        >
-          {lowStockFilter
-            ? t("mostraTutti")
-            : t("articoliInEsaurimento")}
-        </button>
+        <div className="warehouse-toolbar-actions">
+          <button
+            onClick={() => dispatch(toggleLowStockFilter())}
+            aria-pressed={lowStockFilter}
+            className="custom-button text-sm"
+          >
+            {lowStockFilter
+              ? t("mostraTutti")
+              : t("articoliInEsaurimento")}
+          </button>
 
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="custom-button text-sm"
-        >
-          {t("disponibilitaAltreSedi")}
-        </button>
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="custom-button text-sm"
+          >
+            {t("disponibilitaAltreSedi")}
+          </button>
+        </div>
       </div>
 
       <table className="warehouse-table">
@@ -208,7 +220,7 @@ const WarehouseTable = ({ data, allItems, columns }) => {
               {columns.map((col, j) => {
                 if (col === "stato") {
                   const stockVal =
-                    row.stock?.["Mia Sede"] || row.stock || 0;
+                    getItemStock(row);
 
                   let text;
                   let style;
@@ -221,7 +233,7 @@ const WarehouseTable = ({ data, allItems, columns }) => {
                     text = "Fuori produzione";
                   } else {
                     style = "status-no";
-                    text = "Non disponibile";
+                    text = "Terminato";
                   }
 
                   return (
@@ -238,9 +250,7 @@ const WarehouseTable = ({ data, allItems, columns }) => {
                 if (col === "quantita") {
                   return (
                     <td key={j}>
-                      {row.stock?.["Mia Sede"] ||
-                        row.stock ||
-                        0}
+                      {getItemStock(row)}
                     </td>
                   );
                 }
@@ -303,6 +313,12 @@ const WarehouseTable = ({ data, allItems, columns }) => {
           ))}
         </tbody>
       </table>
+
+      {data.length === 0 && (
+        <p className="warehouse-empty">
+          Nessun prodotto disponibile.
+        </p>
+      )}
 
       {data.length > 0 && filteredData.length === 0 && (
         <p className="warehouse-empty">

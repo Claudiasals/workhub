@@ -3,7 +3,7 @@ import { useState } from "react";
 import { enable2FAAsync } from "../store/feature/authSlice";
 import { useLanguage } from "../context/LanguageContext";
 
-const Enable2FA = () => {
+const Enable2FA = ({ compact = false, title = null, titleClassName = "" }) => {
   const dispatch = useDispatch();
   const { t } = useLanguage();
 
@@ -24,7 +24,7 @@ const Enable2FA = () => {
   const confirmEnable = () => {
     setShowConfirmPopup(false);
 
-    const auth = JSON.parse(localStorage.getItem("auth"));
+    const auth = JSON.parse(sessionStorage.getItem("auth"));
     if (!auth?.token) return;
 
     dispatch(enable2FAAsync({ token: auth.token }));
@@ -35,21 +35,43 @@ const Enable2FA = () => {
     setShowConfirmPopup(false);
   };
 
-  return (
-    <div className="p-6 relative">
-      <h2 className="text-xl font-bold mb-4">
-        {t("abilita2FA")}
-      </h2>
+  const enableButton = (
+    <button
+      type="button"
+      onClick={handleEnable}
+      disabled={twofaLoading}
+      className={
+        compact ? `custom-button w-fit ${title ? "" : "self-end"}` : "btn-login"
+      }
+    >
+      {twofaLoading
+        ? t("attivazioneInCorso")
+        : t("abilita2FA")}
+    </button>
+  );
 
-      <button
-        onClick={handleEnable}
-        disabled={twofaLoading}
-        className="btn-login"
-      >
-        {twofaLoading
-          ? t("attivazioneInCorso")
-          : t("abilita2FA")}
-      </button>
+  return (
+    <div className={compact ? "relative flex flex-col gap-3" : "p-6 relative"}>
+      {!compact && (
+        <h2 className="text-xl font-bold mb-4">
+          {t("abilita2FA")}
+        </h2>
+      )}
+
+      {compact && title ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className={titleClassName}>{title}</h3>
+          {enableButton}
+        </div>
+      ) : null}
+
+      {compact && (
+        <p className="text-sm opacity-75">
+          Aggiunge un controllo extra all'accesso, utile per proteggere l'account.
+        </p>
+      )}
+
+      {(!compact || !title) && enableButton}
 
       {/* Error feedback */}
       {twofaError && (
@@ -72,14 +94,15 @@ const Enable2FA = () => {
 
       {/* Confirmation modal */}
       {showConfirmPopup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-[300px] text-center">
-            <h2 className="text-lg font-bold text-[#090c64] mb-4">
+        <div className="app-modal-backdrop fixed inset-0 flex items-center justify-center z-50">
+          <div className="app-modal-panel p-6 w-[300px] text-center">
+            <h2 className="text-lg font-bold mb-4">
               {t("sicuro2FA")}
             </h2>
 
             <div className="flex justify-around mt-4">
               <button
+                type="button"
                 onClick={cancelEnable}
                 className="custom-button-light transition-transform duration-200 hover:scale-110"
               >
@@ -87,6 +110,7 @@ const Enable2FA = () => {
               </button>
 
               <button
+                type="button"
                 onClick={confirmEnable}
                 className="custom-button transition-transform duration-200 hover:scale-110"
               >

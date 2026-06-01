@@ -6,13 +6,20 @@ import {
   updateUserRequest,
   deleteUserRequest,
 } from "../../api/usersApi";
+import { logout } from "./authSlice";
+
+const sessionExpiredMessage = "Sessione scaduta. Effettua di nuovo il login.";
 
 // Create new user (admin)
 export const createUserAsync = createAsyncThunk(
   "users/create",
-  async ({ newUser, token }, { rejectWithValue }) => {
+  async ({ newUser, token }, { dispatch, rejectWithValue }) => {
     try {
       const { response, data } = await createUserRequest({ newUser, token });
+      if (response.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!response.ok) return rejectWithValue(data.message);
       // Backend returns { user, tempPassword }
       return data.data;
@@ -25,9 +32,13 @@ export const createUserAsync = createAsyncThunk(
 // Fetch all users
 export const fetchUsersAsync = createAsyncThunk(
   "users/fetchAll",
-  async (token, { rejectWithValue }) => {
+  async (token, { dispatch, rejectWithValue }) => {
     try {
       const { response, data } = await fetchUsersRequest(token);
+      if (response.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!response.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -39,9 +50,13 @@ export const fetchUsersAsync = createAsyncThunk(
 // Fetch single user by id
 export const fetchUserByIdAsync = createAsyncThunk(
   "users/fetchById",
-  async ({ id, token }, { rejectWithValue }) => {
+  async ({ id, token }, { dispatch, rejectWithValue }) => {
     try {
       const { response, data } = await fetchUserByIdRequest({ id, token });
+      if (response.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!response.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -53,13 +68,17 @@ export const fetchUserByIdAsync = createAsyncThunk(
 // Update user data
 export const updateUserAsync = createAsyncThunk(
   "users/update",
-  async ({ id, updates, token }, { rejectWithValue }) => {
+  async ({ id, updates, token }, { dispatch, rejectWithValue }) => {
     try {
       const { response, data } = await updateUserRequest({
         id,
         updates,
         token,
       });
+      if (response.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!response.ok) return rejectWithValue(data.message);
       return data.data;
     } catch {
@@ -71,9 +90,13 @@ export const updateUserAsync = createAsyncThunk(
 // Delete user
 export const deleteUserAsync = createAsyncThunk(
   "users/delete",
-  async ({ id, token }, { rejectWithValue }) => {
+  async ({ id, token }, { dispatch, rejectWithValue }) => {
     try {
       const { response, data } = await deleteUserRequest({ id, token });
+      if (response.status === 401) {
+        dispatch(logout());
+        return rejectWithValue(sessionExpiredMessage);
+      }
       if (!response.ok) return rejectWithValue(data.message);
       return id;
     } catch {

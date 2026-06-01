@@ -21,7 +21,7 @@ const localizer = dateFnsLocalizer({
   parse,
   getDay,
   startOfWeek: (date, culture) =>
-    startOfWeek(date, { locale: locales[culture] || it }),
+    startOfWeek(date, { locale: locales[culture] || it, weekStartsOn: 1 }),
   locales,
 });
 
@@ -36,6 +36,62 @@ const SHIFT_HOURS = {
   morning: "08:00-13:00",
   afternoon: "14:00-18:00",
 };
+
+const DEFAULT_DEPARTMENTS = [
+  "specialist reparto it",
+  "cybersecurity",
+  "magazziniere",
+  "Capo reparto",
+  "Manager",
+];
+
+const getDepartmentLabel = (department) =>
+  department.toLowerCase() === "specialist reparto it"
+    ? "reparto IT"
+    : department;
+
+const WEEKDAY_OFFSETS = {
+  monday: 0,
+  tuesday: 1,
+  wednesday: 2,
+  thursday: 3,
+  friday: 4,
+  saturday: 5,
+};
+
+const DEMO_TURNS = [
+  [
+    { dayOffset: 0, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 1, orari: [SHIFT_HOURS.morning] },
+  ],
+  [
+    { dayOffset: 1, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 2, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 4, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 5, orari: [SHIFT_HOURS.morning] },
+  ],
+  [
+    { dayOffset: 2, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 3, orari: [SHIFT_HOURS.morning, SHIFT_HOURS.afternoon] },
+  ],
+  [
+    { dayOffset: 3, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 4, orari: [SHIFT_HOURS.afternoon] },
+  ],
+  [
+    { dayOffset: 4, orari: [SHIFT_HOURS.morning] },
+    { dayOffset: 5, orari: [SHIFT_HOURS.morning] },
+  ],
+];
+
+const DEMO_COMPANY_EVENTS = [
+  { title: "Brief reparto", dayOffset: 0, startHour: 10, endHour: 11 },
+  { title: "Riunione team vendite", dayOffset: 1, startHour: 9, endHour: 10 },
+  { title: "Formazione sicurezza", dayOffset: 2, startHour: 15, endHour: 17 },
+  { title: "Open day clienti", dayOffset: 3, startHour: 11, endHour: 13 },
+  { title: "Inventario settimanale", dayOffset: 4, startHour: 9, endHour: 10 },
+  { title: "Chiusura mensile", dayOffset: 5, startHour: 16, endHour: 18 },
+];
 
 // Weekday index mapping (Monday-based)
 const weekOffset = {
@@ -90,7 +146,8 @@ const CalendarBox = () => {
 
   const dispatch = useDispatch();
   const token = useSelector((s) => s.auth.token);
-  const loggedUser = useSelector((s) => s.auth.user);
+  const role = useSelector((s) => s.auth.user?.role || s.auth.role);
+  const isAdmin = String(role || "").toLowerCase() === "admin";
 
   const users = useSelector((s) => s.users.list);
   const shifts = useSelector((s) => s.shifts.list);
@@ -106,11 +163,15 @@ const CalendarBox = () => {
   // Initial data loading
   useEffect(() => {
     if (!token) return;
-    dispatch(fetchUsersAsync(token));
-    dispatch(fetchAllShiftsAsync({ token }));
+
+    if (isAdmin) {
+      dispatch(fetchUsersAsync(token));
+      dispatch(fetchAllShiftsAsync({ token }));
+    }
+
     dispatch(fetchEventsAsync({ token }));
     dispatch(fetchPointsOfSalesAsync({ token }));
-  }, [token]);
+  }, [dispatch, isAdmin, token]);
 
   // Closes expanded event on outside click
   useEffect(() => {
@@ -143,15 +204,6 @@ const CalendarBox = () => {
       });
     });
 
-    const weekdayMap = {
-      monday: "Lunedì",
-      tuesday: "Martedì",
-      wednesday: "Mercoledì",
-      thursday: "Giovedì",
-      friday: "Venerdì",
-      saturday: "Sabato",
-    };
-
     shifts.forEach((shiftDoc) => {
       const empId =
         typeof shiftDoc.user === "string"
@@ -161,16 +213,16 @@ const CalendarBox = () => {
       const emp = employees.get(empId);
       if (!emp) return;
 
-      Object.entries(shiftDoc.shifts).forEach(([dayKey, val]) => {
-        const giorno = weekdayMap[dayKey];
-        if (!giorno) return;
+      Object.entries(shiftDoc.shifts || {}).forEach(([dayKey, val]) => {
+        const dayOffset = WEEKDAY_OFFSETS[dayKey];
+        if (dayOffset === undefined) return;
 
         const orari = [];
         if (val?.morning) orari.push(SHIFT_HOURS.morning);
         if (val?.afternoon) orari.push(SHIFT_HOURS.afternoon);
 
         if (orari.length) {
-          emp.turni.push({ giorno, orari });
+          emp.turni.push({ dayOffset, orari });
         }
       });
     });
@@ -178,10 +230,41 @@ const CalendarBox = () => {
     return [...employees.values()];
   }, [users, shifts]);
 
+  const fallbackEmployees = useMemo(
+    () =>
+      DEFAULT_DEPARTMENTS.map((department, index) => ({
+        id: `demo-calendar-${department}`,
+        firstName: department.split(" ")[0] || "Demo",
+        lastName: "",
+        fullName: department,
+        email: `demo-calendar-${index}@workhub.demo`,
+        department,
+        matricola: index + 1,
+        turni: DEMO_TURNS[index % DEMO_TURNS.length],
+      })),
+    []
+  );
+
+  const displayedEmployees = useMemo(() => {
+    const employeesWithShifts = EmployeeList.filter(
+      (employee) => employee.turni.length > 0
+    );
+    const departmentsWithRealShifts = new Set(
+      employeesWithShifts.map((employee) => employee.department)
+    );
+    const missingDemoDepartments = fallbackEmployees.filter(
+      (employee) => !departmentsWithRealShifts.has(employee.department)
+    );
+
+    return employeesWithShifts.length > 0
+      ? [...employeesWithShifts, ...missingDemoDepartments]
+      : fallbackEmployees;
+  }, [EmployeeList, fallbackEmployees]);
+
   // Department list
   const departments = useMemo(
-    () => [...new Set(EmployeeList.map((e) => e.department))],
-    [EmployeeList]
+    () => [...new Set(displayedEmployees.map((e) => e.department))],
+    [displayedEmployees]
   );
 
   // Department color mapping
@@ -210,7 +293,17 @@ const CalendarBox = () => {
 
   // Selected departments filter
   const [selectedDepartments, setSelectedDepartments] = useState([]);
-  useEffect(() => setSelectedDepartments(departments), [departments]);
+  useEffect(() => {
+    setSelectedDepartments((current) => {
+      if (!departments.length) return [];
+
+      const stillAvailable = departments.filter((dept) =>
+        current.includes(dept)
+      );
+
+      return stillAvailable.length ? stillAvailable : departments;
+    });
+  }, [departments]);
 
   // Merges events in month view
   const mergeMonthly = (events) => {
@@ -232,26 +325,21 @@ const CalendarBox = () => {
 
   // Shift events generation
   const eventiTurni = useMemo(() => {
-    if (!EmployeeList || !loggedUser) return [];
+    if (!displayedEmployees.length) return [];
 
     const result = [];
-    const monday = startOfWeek(new Date(), { locale: it });
+    const monday = startOfWeek(new Date(), { locale: it, weekStartsOn: 1 });
     const weeks = 52;
 
     for (let w = -weeks; w <= weeks; w++) {
       const startWeek = new Date(monday);
       startWeek.setDate(monday.getDate() + w * 7);
 
-      EmployeeList.forEach((e) => {
-        if (loggedUser.role === "user" && loggedUser.email !== e.email) return;
-        if (
-          loggedUser.role !== "user" &&
-          !selectedDepartments.includes(e.department)
-        )
-          return;
+      displayedEmployees.forEach((e) => {
+        if (!selectedDepartments.includes(e.department)) return;
 
         e.turni.forEach((t) => {
-          const offset = weekOffset[t.giorno];
+          const offset = t.dayOffset ?? weekOffset[t.giorno];
           if (offset === undefined) return;
 
           const currentDay = new Date(startWeek);
@@ -278,7 +366,7 @@ const CalendarBox = () => {
             );
 
             result.push({
-              id: `${e.id}-${t.giorno}-${idx}-${w}`,
+              id: `${e.id}-${offset}-${idx}-${w}`,
               title: getInitials(e.firstName, e.lastName),
               fullName: e.fullName,
               department: e.department,
@@ -294,12 +382,12 @@ const CalendarBox = () => {
     }
 
     return view === "month" ? mergeMonthly(result) : result;
-  }, [EmployeeList, loggedUser, selectedDepartments, view]);
+  }, [displayedEmployees, selectedDepartments, view]);
 
   // Company events mapping
   const eventiAziendali = useMemo(
-    () =>
-      (eventsData || []).map((ev) => {
+    () => {
+      const mappedEvents = (eventsData || []).map((ev) => {
         const start = new Date(ev.startDate);
         start.setHours(8, 0, 0, 0);
 
@@ -317,11 +405,48 @@ const CalendarBox = () => {
           type: "event",
           color: "#F59E0B",
         };
-      }),
+      });
+
+      const monday = startOfWeek(new Date(), { locale: it, weekStartsOn: 1 });
+
+      const demoEvents = DEMO_COMPANY_EVENTS.map((ev, index) => {
+        const start = new Date(monday);
+        start.setDate(monday.getDate() + ev.dayOffset);
+        start.setHours(ev.startHour, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setHours(ev.endHour, 0, 0, 0);
+
+        return {
+          id: `demo-company-event-${index}`,
+          title: ev.title,
+          fullName: "Evento aziendale",
+          department: "Eventi",
+          orario: `${String(ev.startHour).padStart(2, "0")}:00-${String(
+            ev.endHour
+          ).padStart(2, "0")}:00`,
+          start,
+          end,
+          type: "event",
+          color: "#F59E0B",
+        };
+      });
+
+      return [...mappedEvents, ...demoEvents];
+    },
     [eventsData]
   );
 
   const eventi = mode === "turni" ? eventiTurni : eventiAziendali;
+  const allDepartmentsSelected =
+    departments.length > 0 &&
+    departments.every((dept) => selectedDepartments.includes(dept));
+
+  const toggleAllDepartments = () => {
+    setSelectedDepartments(
+      allDepartmentsSelected ? [] : [...departments]
+    );
+  };
 
   // Dynamic event styling
   const eventStyleGetter = (event) => ({
@@ -401,79 +526,72 @@ const CalendarBox = () => {
 
   return (
     <div ref={wrapperRef} className="w-full flex flex-col">
-      <div className="flex flex-wrap items-center gap-3 px-6 mt-4">
-        {mode === "turni" &&
-          loggedUser.role !== "user" &&
-          departments.map((dept) => {
-            const active = selectedDepartments.includes(dept);
-            const color = getDepartmentColor(dept);
-
-            return (
-              <div
-                key={dept}
-                onClick={() =>
-                  setSelectedDepartments((prev) =>
-                    prev.includes(dept)
-                      ? prev.filter((d) => d !== dept)
-                      : [...prev, dept]
-                  )
-                }
-                className={`
-                  flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer select-none
-                  text-sm font-semibold border shadow-sm transition-all
-                  ${active ? "text-white" : "text-[#090c64] bg-white/70"}
-                `}
-                style={{ backgroundColor: active ? color : undefined }}
-              >
-                <div
-                  className={`
-                    w-4 h-4 rounded flex items-center justify-center text-xs font-bold
-                    ${active ? "bg-white text-black" : "border border-current"}
-                  `}
-                >
-                  {active ? "✓" : ""}
-                </div>
-
-                {dept}
-
-                <div
-                  className="w-3 h-3 rounded-xl ml-1"
-                  style={{ backgroundColor: color }}
-                />
-              </div>
-            );
-          })}
-
-        {mode === "turni" && loggedUser.role !== "user" && (
+      <div className="flex flex-nowrap items-center gap-2 px-0 mt-4 overflow-x-auto">
+        {mode === "turni" && (
           <>
-            <button
-              onClick={() => setSelectedDepartments([...departments])}
-              className="custom-button text-[15px]"
-            >
-              {t("selezionaTutti")}
-            </button>
+            {departments.map((dept) => {
+              const active = selectedDepartments.includes(dept);
+              const color = getDepartmentColor(dept);
+
+              return (
+                <div
+                  key={dept}
+                  onClick={() =>
+                    setSelectedDepartments((prev) =>
+                      prev.includes(dept)
+                        ? prev.filter((d) => d !== dept)
+                        : [...prev, dept]
+                    )
+                  }
+                  className={`
+                    dept-filter
+                    ${active ? "active text-white" : "text-[#090c64] bg-white/70"}
+                  `}
+                  style={{ backgroundColor: active ? color : undefined }}
+                >
+                  <div
+                    className={`
+                      w-3 h-3 rounded flex items-center justify-center text-[10px] font-bold
+                      ${active ? "bg-white text-black" : "border border-current"}
+                    `}
+                  >
+                    {active ? "✓" : ""}
+                  </div>
+
+                  {getDepartmentLabel(dept)}
+
+                  <div
+                    className="w-2.5 h-2.5 rounded-xl"
+                    style={{ backgroundColor: color }}
+                  />
+                </div>
+              );
+            })}
 
             <button
-              onClick={() => setSelectedDepartments([])}
-              className="custom-button text-[15px]"
+              onClick={toggleAllDepartments}
+              className="custom-button text-[15px] shrink-0"
+              type="button"
             >
-              {t("deselezionaTutti")}
+              {allDepartmentsSelected ? t("deseleziona") : t("seleziona")}
             </button>
           </>
         )}
 
-        <select
-          value={mode}
-          onChange={(e) => setMode(e.target.value)}
-          className="calendar-select ml-auto text-[15px]"
-        >
-          <option value="turni">{t("turni")}</option>
-          <option value="eventi">{t("eventi")}</option>
-        </select>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="calendar-select text-[15px]"
+          >
+            <option value="turni">{t("turni")}</option>
+            <option value="eventi">{t("eventi")}</option>
+          </select>
+        </div>
       </div>
 
       <div className="w-full min-h-[700px] flex justify-center">
-        <div className="w-full mt-3 mr-6 h-full relative">
+        <div className="calendar-rbc-wrap w-full mt-3 h-full relative">
           <Calendar
             localizer={localizer}
             events={eventi}

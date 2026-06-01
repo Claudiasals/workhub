@@ -6,7 +6,7 @@ import bgLight from "../assets/bg/bg.jpg";
 import bgDark from "../assets/bg/bgScuro.jpg";
 
 import iconLogo from "../assets/logo/logoVuoto.png";
-import iconLogo2 from "../assets/logo/LogoCompletoSenzaBg.png";
+import iconLogo2 from "../assets/logo/LogoCompletoSenzaBG.png";
 import iconChiusa from "../assets/logo/iconaLogo.png";
 import iconChiusaDark from "../assets/logo/iconaLogoChiara.png";
 
@@ -34,20 +34,20 @@ const PublicLayout = () => {
       {sidebarOpen && (
         <aside
           className={`
+            sidebar-aside
             fixed top-0 left-0 h-full z-40
             transition-all duration-700 ease-in-out
+            border-r flex flex-col w-[190px] md:w-[210px] py-2 px-4
             ${
               theme === "dark"
-                ? "bg-[#D0D8FB]/30"
-                : "bg-linear-to-br from-indigo-950 via-indigo-950/90 to-violet-900"
+                ? "sidebar-aside-dark"
+                : "bg-linear-to-br from-indigo-950 via-indigo-950/90 to-violet-900 border-white/30 shadow-md backdrop-blur-sm"
             }
-            backdrop-blur-sm border-r border-white/30 shadow-md
-            flex flex-col w-[200px] md:w-[220px] py-2 px-4
           `}
         >
           {/* Sidebar logo (click to close) */}
           <div
-            className="flex flex-col items-center gap-3 cursor-pointer mb-8"
+            className="flex flex-col items-center gap-2 cursor-pointer -mt-4 mb-1 pt-0 translate-y-[5px]"
             onClick={() => setSidebarOpen(false)}
           >
             <img
@@ -57,8 +57,8 @@ const PublicLayout = () => {
             />
           </div>
 
-          {/* Sidebar navigation */}
-          <div className="flex-1 w-full">
+          {/* Sidebar navigation — centered in remaining height, shifted up vs pure geometric center */}
+          <div className="sidebar-nav-area flex-1 w-full min-h-0 flex flex-col">
             <Sidebar />
           </div>
         </aside>
@@ -83,9 +83,10 @@ const PublicLayout = () => {
 
       {/* Main content area */}
       <section
+        data-main-scroll
         className={`
           transition-all duration-500 ease-in-out
-          ${sidebarOpen ? "ml-[220px] md:ml-[215px]" : "ml-20 md:ml-[90px]"}
+          ${sidebarOpen ? "ml-[210px] md:ml-[205px]" : "ml-20 md:ml-[90px]"}
           mt-6 mb-6
           overflow-y-auto
           pr-4 pl-4 md:pr-8 md:pl-8
@@ -99,7 +100,9 @@ const PublicLayout = () => {
         </div>
 
         {/* Routed page content */}
-        <Outlet />
+        <div className="app-page-content">
+          <Outlet />
+        </div>
       </section>
     </>
   );

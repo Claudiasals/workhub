@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { updateItemQuantity } from "../../store/feature/itemsSlice";
 import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
 import bgLight from "../../assets/bg/bg.jpg";
 import bgDark from "../../assets/bg/bgScuro.jpg";
+import AppFeedbackModal from "../AppFeedbackModal";
 
 const DrawerAddNewProduct = ({ open, onClose }) => {
   const dispatch = useDispatch();
@@ -21,6 +23,7 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [quantity, setQuantity] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -86,7 +89,11 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
   // Adds stock quantity to selected item
   const handleAddStock = async (itemId) => {
     if (!qty || qty <= 0) {
-      alert(t("inserisciQuantitaValida"));
+      setFeedback({
+        tone: "warning",
+        title: t("modaleAttenzione"),
+        message: t("inserisciQuantitaValida"),
+      });
       return;
     }
 
@@ -96,33 +103,51 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
       );
 
       if (updateItemQuantity.fulfilled.match(resultAction)) {
-        alert(`${t("stockAggiornato")} ${resultAction.payload.stock}`);
         setQuantity("");
         setSearch("");
         setResults([]);
-        onClose?.();
+        setFeedback({
+          tone: "success",
+          title: t("modaleSuccesso"),
+          message: `${t("stockAggiornato")} ${resultAction.payload.stock}`,
+          afterClose: onClose,
+        });
       } else {
         const err = resultAction.payload || resultAction.error?.message;
-        alert(`${t("errore")} ${err}`);
+        setFeedback({
+          tone: "error",
+          title: t("modaleErrore"),
+          message: `${t("errore")} ${err}`,
+        });
       }
     } catch (err) {
       console.error(err);
-      alert(t("erroreImprevisto"));
+      setFeedback({
+        tone: "error",
+        title: t("modaleErrore"),
+        message: t("erroreImprevisto"),
+      });
     }
   };
 
-  if (!open) return null;
+  const closeFeedback = () => {
+    const afterClose = feedback?.afterClose;
+    setFeedback(null);
+    afterClose?.();
+  };
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+  if (!open && !feedback) return null;
+
+  const content = open ? (
+    <div className="drawer-root">
+      <div className="drawer-overlay" onClick={onClose} />
 
       <aside
         className="drawer-panel"
         role="dialog"
         aria-modal="true"
         style={{
-          backgroundImage: `url(${theme === "dark" ? bgDark : bgLight})`,
+          "--drawer-bg-image": `url(${theme === "dark" ? bgDark : bgLight})`,
         }}
       >
         <header className="drawer-header">
@@ -145,7 +170,7 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
             placeholder="Es. BILLY Libreria o SKU1234"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="drawer-input"
+            className="drawer-search mb-4"
           />
 
           <label className="drawer-label">
@@ -161,12 +186,14 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
             placeholder="Es. 5"
           />
 
-          <button
-            onClick={searchItems}
-            className="custom-button text-sm mb-6"
-          >
-            {t("cercaProdotto")}
-          </button>
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={searchItems}
+              className="custom-button text-sm"
+            >
+              {t("cercaProdotto")}
+            </button>
+          </div>
 
           <div className="flex flex-col gap-4">
             {results.length === 0 && (
@@ -221,6 +248,20 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
         </div>
       </aside>
     </div>
+  ) : null;
+
+  return (
+    <>
+      {content && createPortal(content, document.body)}
+      <AppFeedbackModal
+        open={Boolean(feedback)}
+        title={feedback?.title}
+        message={feedback?.message}
+        tone={feedback?.tone}
+        closeLabel={t("chiudi")}
+        onClose={closeFeedback}
+      />
+    </>
   );
 };
 

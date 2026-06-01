@@ -94,9 +94,146 @@
 .adminEmployee button {
   transition: all 0.25s ease;
 }
-
 .adminEmployee button:hover {
   opacity: 0.92;
+}
+
+.adminEmployee {
+  min-width: 0;
+}
+
+.adminEmployee .custom-box,
+.adminEmployee .app-surface,
+.adminEmployee .table-container {
+  min-width: 0;
+}
+
+.employee-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.employee-stats-grid .page-info-box {
+  display: flex;
+  height: 48px !important;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 14px !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  gap: 0.75rem;
+}
+
+.employee-stats-grid .employee-stat-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.employee-stats-grid .employee-stat-label svg {
+  width: var(--app-icon-size);
+  height: var(--app-icon-size);
+  flex-shrink: 0;
+}
+
+.employee-stats-grid .page-info-box span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.employee-stats-grid .page-info-box .employee-stat-value {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.employee-stats-grid .employee-stat-action {
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.employee-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.employee-card-header,
+.employee-request-row,
+.employee-shift-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.employee-request-row > span,
+.employee-shift-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.employee-request-actions,
+.employee-shift-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.employee-time-fields {
+  display: flex;
+  gap: 1rem;
+}
+
+.employee-time-fields > input {
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .employee-two-column {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .employee-card-header,
+  .employee-request-row,
+  .employee-shift-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .employee-request-actions,
+  .employee-shift-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .employee-card-header .custom-button,
+  .employee-card-header .custom-button-light,
+  .employee-request-actions .custom-button,
+  .employee-request-actions .custom-button-light {
+    width: 100%;
+  }
+
+  .employee-time-fields {
+    flex-direction: column;
+  }
 }
 
 /* select e option in dark mode */

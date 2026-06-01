@@ -64,45 +64,58 @@ const OrdersTable = ({
   ];
 
   return (
-    <div className="table-wrapper p-6 flex flex-col gap-4">
-      <div className="flex flex-col gap-3 mb-3">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-[#090c64]">
-              {t("ordiniTitolo")}
-            </h2>
+    <div className="table-container">
+      <div className="table-toolbar">
+        <div className="table-toolbar-left">
+          <h2 className="text-lg font-bold">
+            {t("ordiniTitolo")}
+          </h2>
 
-            <button
-              onClick={() => setSortAZ(!sortAZ)}
-              className="warehouse-btn font-bold"
-            >
-              {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
-            </button>
-          </div>
+          <button
+            onClick={() => setSortAZ(!sortAZ)}
+            className="table-sort-btn"
+          >
+            {sortAZ ? t("annullaAZ") : t("ordinaAZ")}
+          </button>
+        </div>
 
+        <div className="table-toolbar-search">
           <input
             type="text"
             placeholder="Cerca..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="table-search w-full sm:w-60"
+            className="table-search"
           />
-
-          {customToolbar}
         </div>
+
+        {customToolbar && (
+          <div className="table-toolbar-right">
+            {customToolbar}
+          </div>
+        )}
       </div>
 
-      <div className="w-full overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full text-xs sm:text-sm text-[#090c64] border-auto">
+      <div className="table-scroll-wrapper">
+        <table className="table-base orders-table-base">
           <thead>
-            <tr className="bg-white/40 backdrop-blur-md text-[#090c64] border-y border-white/10">
+            <tr>
               {columns.map((item, idx) => {
                 const isCentered = centeredCols.includes(item);
                 return (
                   <th
                     key={idx}
-                    className={`p-3 whitespace-nowrap ${
-                      isCentered ? "text-center" : "text-left"
+                    className={`
+                      ${idx === 0 ? "rounded-l-xl" : ""}
+                      ${
+                        !actionLabel && idx === columns.length - 1
+                          ? "rounded-r-xl"
+                          : ""
+                      }
+                      ${
+                        isCentered
+                          ? "orders-cell-center"
+                          : "orders-cell-left"
                     }`}
                   >
                     {columnsLabels[item] ?? t(item)}
@@ -111,7 +124,7 @@ const OrdersTable = ({
               })}
 
               {actionLabel && (
-                <th className="p-3 whitespace-nowrap text-center">
+                <th className="rounded-r-xl orders-cell-center">
                   {actionLabel}
                 </th>
               )}
@@ -123,14 +136,18 @@ const OrdersTable = ({
               const isOpen = openRowId === row._id;
               const totalColumns =
                 columns.length + (actions && actions.length > 0 ? 1 : 0);
+              const toggleRow = () => {
+                setOpenRowId(isOpen ? null : row._id);
+                if (onRowClick) onRowClick(row);
+              };
 
               return (
                 <React.Fragment key={row._id}>
-                  <tr className="rounded-xl">
+                  <tr className="table-row" onClick={toggleRow}>
                     {columns.map((col, j) => {
                       if (col === "stato") {
                         return (
-                          <td key={j} className="p-3 text-center">
+                          <td key={j} className="orders-cell-center">
                             {row.stato || "-"}
                           </td>
                         );
@@ -138,7 +155,7 @@ const OrdersTable = ({
 
                       if (col === "corriere") {
                         return (
-                          <td key={j} className="p-3 text-center">
+                          <td key={j} className="orders-cell-center">
                             {row.corriere || "-"}
                           </td>
                         );
@@ -146,7 +163,7 @@ const OrdersTable = ({
 
                       if (col === "prodotto") {
                         return (
-                          <td key={j} className="p-3">
+                          <td key={j} className="orders-cell-left">
                             <div className="flex items-center gap-3">
                               <span
                                 className={`cursor-pointer text-base transition-transform ${
@@ -154,8 +171,7 @@ const OrdersTable = ({
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenRowId(isOpen ? null : row._id);
-                                  if (onRowClick) onRowClick(row);
+                                  toggleRow();
                                 }}
                               >
                                 ⌵
@@ -168,7 +184,7 @@ const OrdersTable = ({
 
                       if (col === "totale") {
                         return (
-                          <td key={j} className="p-3 text-center">
+                          <td key={j} className="orders-cell-center">
                             {formatEuro(row.totale)}
                           </td>
                         );
@@ -178,8 +194,10 @@ const OrdersTable = ({
                       return (
                         <td
                           key={j}
-                          className={`p-3 ${
-                            centered ? "text-center" : ""
+                          className={`${
+                            centered
+                              ? "orders-cell-center"
+                              : "orders-cell-left"
                           }`}
                         >
                           {row[col] ?? "-"}
@@ -188,12 +206,15 @@ const OrdersTable = ({
                     })}
 
                     {actions && actions.length > 0 && (
-                      <td className="p-3 flex gap-2 items-center justify-center">
+                      <td className="table-actions orders-cell-center">
                         {actions.map((action) => (
                           <button
                             key={action.name}
-                            className="cursor-pointer"
-                            onClick={() => action.onClick(row)}
+                            className="table-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              action.onClick(row);
+                            }}
                           >
                             {action.icon}
                           </button>
@@ -206,10 +227,10 @@ const OrdersTable = ({
                     <tr>
                       <td
                         colSpan={totalColumns}
-                        className="p-4 text-sm md:text-base"
+                        className="orders-details-cell text-sm md:text-base"
                       >
                         <div className="flex flex-col gap-6 p-4">
-                          <div className="flex">
+                          <div className="flex gap-6">
                             <div className="shrink-0 flex justify-center md:justify-start">
                               {row.prodottoDettaglio?.image && (
                                 <img

@@ -15,7 +15,7 @@ const extractError = (err) => {
 
 const getToken = () => {
   try {
-    const raw = localStorage.getItem("auth");
+    const raw = sessionStorage.getItem("auth");
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed?.token || null;

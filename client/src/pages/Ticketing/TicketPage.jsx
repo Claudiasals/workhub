@@ -6,12 +6,15 @@ import TicketCreator from "./TicketCreator";
 const TicketPage = () => {
 	// Get the current user from the Redux store
 	const user = useSelector((state) => state.auth.user); // Get the user from Redux state
+	const authRole = useSelector((state) => state.auth.role);
+	const role = user?.role || authRole;
+	const isAdmin = String(role || "").toLowerCase() === "admin";
 
 	// If the user is an admin, render the admin ticket page
-	if (user?.role === "admin") return <TicketPageAdmin />; // If user is admin, show admin page, otherwise show user page
+	if (isAdmin) return <TicketPageAdmin />; // If user is admin, show admin page, otherwise show user page
 
 	// Otherwise, render the ticket creator page for regular users
-	return <TicketCreator />;
+	return <TicketCreator user={user} />;
 };
 
 export default TicketPage;

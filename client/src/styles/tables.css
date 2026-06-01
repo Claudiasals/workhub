@@ -1,8 +1,18 @@
 /* Warehouse table buttons */
 .warehouse-btn {
-  @apply px-3 py-2 rounded-lg shadow-sm text-sm border-0 transition-all duration-200;
+  @apply rounded-lg shadow-sm text-sm border-0 transition-all duration-200;
   background-color: #090c64;
   color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 0.75rem;
+  font-family: var(--font-nunito);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .warehouse-btn:hover {
@@ -24,15 +34,19 @@
 
 /* Wrapper esterno glass */
 .table-wrapper {
-  background-color: rgba(250,250,250,0.1);
-  border: 1px solid white;
-  border-radius: 1rem;
-  backdrop-filter: blur(6px);
+  background-color: rgba(250, 250, 250, 0.125);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .dark .table-wrapper {
-  background-color: rgba(255,255,255,0.05) !important;
-  border-color: rgba(255,255,255,0.2) !important;
+  background-color: rgba(250, 250, 250, 0.063) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
   color: white !important;
 }
 
@@ -49,8 +63,11 @@ table thead tr {
 }
 
 table thead th {
-  padding: 12px;
+  height: 41px;
+  padding: 0 12px;
+  line-height: 1.15;
   text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
@@ -103,20 +120,30 @@ table tr {
 }
 
 /* Search bar */
-.table-search {
+.table-search,
+.orders-search,
+.ticket-user-search {
   background-color: rgba(255,255,255,0.7);
   border: 1px solid white;
   border-radius: 0.75rem;
   padding: 0.5rem 0.8rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
 }
 
-.dark .table-search {
+.dark .table-search,
+.dark .orders-search,
+.dark .ticket-user-search {
   background-color: rgba(255,255,255,0.08) !important;
   border-color: rgba(255,255,255,0.25) !important;
   color: white !important;
 }
 
-.dark .table-search::placeholder {
+.dark .table-search::placeholder,
+.dark .orders-search::placeholder,
+.dark .ticket-user-search::placeholder {
   color: rgba(255,255,255,0.5) !important;
 }
 
@@ -124,10 +151,23 @@ table tr {
 .table-sort-btn {
   background-color: #090c64;
   color: white;
-  border: 1px solid white;
-  font-weight: 700;
-  padding: 0.45rem 0.9rem;
+  border: 0;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 0.75rem;
   border-radius: 0.75rem;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  font-family: var(--font-nunito);
+  line-height: 1;
+  white-space: nowrap;
+  transition: all 0.5s ease;
 }
 
 .table-sort-btn:hover {
@@ -137,7 +177,7 @@ table tr {
 .dark .table-sort-btn {
   background-color: white !important;
   color: #090c64 !important;
-  border-color: rgba(255,255,255,0.3) !important;
+  border: 0 !important;
 }
 
 /* Cella azioni (edit, delete) */
@@ -175,13 +215,55 @@ table tr {
 .table-container {
   width: 100%;
   padding: 1rem;
-  border-radius: 1rem;
-  background-color: rgba(250, 250, 250, 0.1);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  background-color: rgba(250, 250, 250, 0.125);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.table-container-embedded {
+  padding: 0 !important;
+  padding-top: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Embedded tables live inside app-surface — no extra glass layer in dark mode */
+.dark .table-container.table-container-embedded {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.dark .app-surface .table-container-embedded .table-scroll-wrapper {
+  background: transparent;
+}
+
+.dark .app-surface .table-container-embedded .table-base thead th {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .app-surface .table-container-embedded .table-base tbody td {
+  background-color: transparent;
+}
+
+.dark .app-surface .table-container-embedded .table-row:hover td {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .app-surface .table-container-embedded table tr:nth-child(even) td {
+  background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
 /* Toolbar */
@@ -200,8 +282,31 @@ table tr {
   align-items: center;
 }
 
+.table-toolbar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.table-toolbar-search {
+  flex: 1 1 18rem;
+  min-width: min(100%, 14rem);
+}
+
+.table-toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
 /* Search input — EXACT original behavior */
-.table-search {
+.table-search,
+.orders-search,
+.ticket-user-search {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   border-radius: 0.75rem;
@@ -214,9 +319,38 @@ table tr {
 
 /* sm:w-60 */
 @media (min-width: 640px) {
-  .table-search {
+  .table-search,
+  .orders-search {
     width: 15rem;
   }
+}
+
+.table-toolbar-search .table-search {
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .table-toolbar-left,
+  .table-toolbar-search,
+  .table-toolbar-right {
+    width: 100%;
+  }
+
+  .table-toolbar-right {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+.dashboard-card-search {
+  flex: 0 1 15rem;
+  width: 15rem;
+  max-width: 36vw;
+}
+
+.ticket-user-search {
+  padding-left: 2.5rem;
+  padding-right: 2rem;
 }
 
 /* Scroll wrapper */
@@ -237,9 +371,12 @@ table tr {
 
 /* Headers */
 .table-base thead th {
-  padding: 0.75rem;
+  height: 41px;
+  padding: 0 0.75rem;
   font-weight: 700;
+  line-height: 1.15;
   text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
   background-color: rgba(255, 255, 255, 0.6);
 }
@@ -260,6 +397,43 @@ table tr {
   text-align: center;
 }
 
+.table-container-embedded .table-base {
+  table-layout: fixed;
+}
+
+.table-container-embedded .table-base td {
+  height: 46px;
+  padding: 0.55rem 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.table-container-embedded .table-base thead th {
+  height: 41px;
+  padding: 0 0.75rem;
+}
+
+.table-container-embedded .table-actions {
+  height: 46px;
+}
+
+.orders-table-base th.orders-cell-left,
+.orders-table-base td.orders-cell-left,
+.orders-table-base td.orders-details-cell {
+  text-align: left;
+}
+
+.orders-table-base th.orders-cell-center,
+.orders-table-base td.orders-cell-center {
+  text-align: center;
+}
+
+.orders-table-base td.orders-details-cell {
+  padding: 1rem;
+}
+
 /* Actions */
 .table-actions {
   display: flex;
@@ -277,7 +451,8 @@ table tr {
 
 /* Dark mode */
 .dark .table-container {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(250, 250, 250, 0.063);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .dark .table-base {

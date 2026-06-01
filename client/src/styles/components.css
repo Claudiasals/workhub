@@ -2,8 +2,8 @@
 
   /* Btn Login */
   .btn-login {
-    @apply w-full sm:w-[225px] h-[50px] mt-8 rounded-xl shadow-md border border-white/20
-           transition-all duration-500 cursor-pointer font-bold font-nunito
+    @apply w-full sm:w-[225px] h-[50px] mt-8 rounded-xl shadow-md border-0
+           transition-all duration-500 cursor-pointer font-semibold font-nunito
            text-white bg-[#090c64];
   }
 
@@ -14,14 +14,14 @@
 
   /* Light mode */
   :root .btn-login {
-    @apply border-white/30 hover:border-white/50 hover:shadow-lg hover:scale-105;
+    @apply hover:shadow-lg hover:scale-105;
   }
 
   /* Dark mode */
   .dark .btn-login {
     background-color: white !important;
     color: #090c64 !important;
-    border-color: rgba(255,255,255,0.3) !important;
+    border: 0 !important;
   }
 
   /* 
@@ -32,8 +32,17 @@
   /* Base per tutti i bottoni del calendario */
   .calendar-btn,
   .calendar-view-btn {
-    @apply px-4 py-2 rounded-xl font-semibold cursor-pointer 
+    @apply rounded-xl cursor-pointer
            border shadow-md transition-all duration-300 select-none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    min-height: 35px;
+    padding: 0 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   /* Light mode — default (inattivo) */
@@ -49,13 +58,14 @@
   .calendar-view-btn:not(.active):hover {
     background-color: #090c64 !important;
     color: white !important;
+    border-color: transparent !important;
   }
 
   /* Active (month/week/day) light */
   .calendar-view-btn.active {
     background-color: #090c64 !important;
     color: white !important;
-    border-color: #090c64 !important;
+    border-color: transparent !important;
   }
 
   /* Dark mode — default (inattivo) */
@@ -77,22 +87,35 @@
   .dark .calendar-view-btn.active {
     background-color: white !important;
     color: #090c64 !important;
-    border-color: white !important;
+    border-color: transparent !important;
   }
 
   /* SELECT MODE (Turni/Eventi) */
   .calendar-select {
-    @apply px-6 py-2 rounded-xl text-sm font-semibold border shadow-sm bg-[#090c64] text-white;
+    @apply rounded-xl text-sm border-0 shadow-sm bg-[#090c64] text-white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    min-height: 35px;
+    padding: 0 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .dark .calendar-select {
     background-color: white !important;
     color: #090c64 !important;
+    border: 0 !important;
   }
-
   /* Filtri reparto */
   .dept-filter {
-    @apply flex items-center gap-3 px-4 py-2 rounded-xl cursor-pointer select-none text-sm font-semibold border shadow-sm transition-all;
+    @apply flex shrink-0 items-center gap-2 px-2.5 py-2 rounded-xl cursor-pointer select-none text-[13px] border shadow-sm transition-all;
+    height: 35px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .dark .dept-filter:not(.active) {

@@ -6,6 +6,7 @@ import { SunIcon, MoonIcon } from "@phosphor-icons/react";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { recoverPasswordAsync } from "../store/feature/authSlice";
+import AppFeedbackModal from "../components/AppFeedbackModal";
 
 import bgLight from "../assets/bg/bg.jpg";
 import bgDark from "../assets/bg/bgScuro.jpg";
@@ -23,6 +24,7 @@ const PasswordRecoveryPage = () => {
   // Local form state
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [recoveryModalDismissed, setRecoveryModalDismissed] = useState(false);
 
   // Theme-based UI values
   const backgroundImage = theme === "dark" ? bgDark : bgLight;
@@ -31,6 +33,7 @@ const PasswordRecoveryPage = () => {
   // Submits password recovery request
   const handleRecovery = (e) => {
     e.preventDefault();
+    setRecoveryModalDismissed(false);
     dispatch(recoverPasswordAsync({ email, username }));
   };
 
@@ -69,7 +72,7 @@ const PasswordRecoveryPage = () => {
           </button>
         </div>
 
-        <section className="w-full p-6 rounded-[25px] shadow-md border border-white/90 bg-white/10 backdrop-blur-sm">
+        <section className="app-surface w-full p-6">
           <h2
             className={`${textColor} text-xl font-bold mb-4 pb-2 border-b`}
           >
@@ -79,12 +82,6 @@ const PasswordRecoveryPage = () => {
           {recoveryError && (
             <p className="text-red-500 font-bold text-center mb-4">
               {recoveryError}
-            </p>
-          )}
-
-          {recoveryMessage && (
-            <p className="text-green-500 font-bold text-center mb-4">
-              {t("emailInviata")} {recoveryMessage.email}
             </p>
           )}
 
@@ -138,6 +135,19 @@ const PasswordRecoveryPage = () => {
           </form>
         </section>
       </div>
+
+      <AppFeedbackModal
+        open={Boolean(recoveryMessage) && !recoveryModalDismissed}
+        title={t("modaleSuccesso")}
+        message={
+          recoveryMessage
+            ? `${t("emailInviata")} ${recoveryMessage.email}`
+            : ""
+        }
+        tone="success"
+        closeLabel={t("chiudi")}
+        onClose={() => setRecoveryModalDismissed(true)}
+      />
     </main>
   );
 };

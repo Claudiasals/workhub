@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { TrashIcon } from "@phosphor-icons/react";
 
+import Drawer from "../components/Drawer";
 import OrdersTable from "../components/Orders/OrdersTable";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -32,6 +33,7 @@ const OrderPage = () => {
 
   // Drawer visibility state
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   // New order form state
   const [clientRows, setClientRows] = useState([]);
@@ -150,26 +152,32 @@ const OrderPage = () => {
     e.target.reset();
   };
 
-  // Deletes an existing order
-  const handleDeleteOrder = (id) => {
-    dispatch(deleteOrder({ id, token }));
+  // Opens delete confirmation modal
+  const handleDeleteOrder = (order) => {
+    setOrderToDelete(order);
+  };
+
+  // Deletes an existing order after confirmation
+  const confirmDeleteOrder = () => {
+    if (!orderToDelete) return;
+    dispatch(deleteOrder({ id: orderToDelete._id, token }));
+    setOrderToDelete(null);
   };
 
   return (
-    <div className="w-full px-6 pb-6 flex flex-col gap-6">
-      {drawerOpen && (
-        <div className="p-6 flex flex-col gap-4 rounded-xl border border-white/30 shadow-md backdrop-blur-sm bg-white/20">
-          <h3 className="text-lg font-bold text-[#090c64]">
-            {t("nuovoOrdine")}
-          </h3>
-
+    <div className="w-full pb-6 flex flex-col gap-6">
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={t("nuovoOrdine")}
+      >
           <form
             onSubmit={handleCreateOrder}
-            className="grid grid-cols-2 gap-4"
+            className="flex flex-col gap-4"
           >
             <select
               required
-              className="p-2 border rounded-xl"
+              className="drawer-input !mb-0"
               value={selectedPointOfSaleId}
               onChange={(e) => setSelectedPointOfSaleId(e.target.value)}
             >
@@ -183,7 +191,7 @@ const OrderPage = () => {
 
             <select
               required
-              className="p-2 border rounded-xl"
+              className="drawer-input !mb-0"
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
             >
@@ -200,13 +208,13 @@ const OrderPage = () => {
               min="0"
               required
               placeholder={t("quantitaTotale")}
-              className="p-2 border rounded-xl"
+              className="drawer-input !mb-0"
               onChange={(e) =>
                 setTotalQuantity(Number(e.target.value) || 0)
               }
             />
 
-            <div className="col-span-2 flex justify-between items-center mt-2">
+            <div className="flex justify-between items-center mt-2">
               <span className="text-sm font-semibold">
                 {t("clientiQuantita")}
               </span>
@@ -220,13 +228,16 @@ const OrderPage = () => {
             </div>
 
             {clientRows.map((row, i) => (
-              <div key={i} className="col-span-2 grid grid-cols-2 gap-2">
+              <div
+                key={i}
+                className="grid grid-cols-[minmax(0,1fr)_96px] gap-2"
+              >
                 <select
                   value={row.customerId}
                   onChange={(e) =>
                     handleClientChange(i, "customerId", e.target.value)
                   }
-                  className="p-2 border rounded text-sm"
+                  className="drawer-input !mb-0 text-sm"
                 >
                   <option value="">{t("selezionaCliente")}</option>
                   {customers?.map((c) => {
@@ -251,12 +262,12 @@ const OrderPage = () => {
                     handleClientChange(i, "qty", e.target.value)
                   }
                   placeholder={t("quantitaCliente")}
-                  className="p-2 border rounded text-sm"
+                  className="drawer-input !mb-0 text-sm"
                 />
               </div>
             ))}
 
-            <div className="col-span-2 space-y-1">
+            <div className="space-y-1">
               {hasDuplicateClients && (
                 <p className="text-sm text-red-600 font-semibold">
                   {t("stessoClienteErrore")}
@@ -270,11 +281,11 @@ const OrderPage = () => {
               )}
             </div>
 
-            <div className="col-span-2 flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-2">
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="px-4 py-2 border rounded-xl"
+                className="custom-button-light px-4 py-2"
               >
                 {t("annulla")}
               </button>
@@ -287,6 +298,45 @@ const OrderPage = () => {
               </button>
             </div>
           </form>
+      </Drawer>
+
+      {orderToDelete && (
+        <div
+          className="app-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="app-modal-panel w-full max-w-[420px] p-6 text-center">
+            <h3 className="mb-3 text-lg font-bold">
+              {t("confermaEliminazioneOrdine")}
+            </h3>
+
+            <p className="mb-6 text-sm font-semibold opacity-80">
+              {t("testoEliminazioneOrdine")}{" "}
+              <span className="font-extrabold">
+                {orderToDelete.prodotto}
+              </span>
+              ?
+            </p>
+
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderToDelete(null)}
+                className="custom-button-light px-4 py-2"
+              >
+                {t("annulla")}
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDeleteOrder}
+                className="rounded-xl bg-red-600 px-4 py-2 font-bold text-white shadow-md transition hover:bg-red-700"
+              >
+                {t("elimina")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -303,7 +353,7 @@ const OrderPage = () => {
         }}
         customToolbar={
           <button
-            onClick={() => setDrawerOpen((v) => !v)}
+            onClick={() => setDrawerOpen(true)}
             className="custom-button text-[14px]"
           >
             {t("nuovoOrdine")}
@@ -315,12 +365,12 @@ const OrderPage = () => {
             name: "delete",
             icon: (
               <TrashIcon
-                size={28}
+                size={16}
                 color={theme === "dark" ? "#ff4d4d" : "#ff0000"}
                 weight="duotone"
               />
             ),
-            onClick: (row) => handleDeleteOrder(row._id),
+            onClick: (row) => handleDeleteOrder(row),
           },
         ]}
       />
