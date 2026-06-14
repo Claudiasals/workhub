@@ -55,7 +55,8 @@ export const getCustomerById = async (req, res) => {
         $elemMatch: { client: customer._id },
       },
     })
-      .populate(["product", "pointOfSales"])
+      .populate({ path: "product", populate: { path: "category" } })
+      .populate("pointOfSales")
       .lean();
 
     // Map orders to customer-specific structure

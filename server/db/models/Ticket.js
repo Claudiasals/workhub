@@ -21,6 +21,26 @@ const TicketSchema = new Schema({
         enum: ['open', 'closed'],
         default: 'open'
     },
+    aiClassification: {
+        priority: {
+            type: String,
+            enum: ['bassa', 'media', 'alta'],
+        },
+        category: {
+            type: String,
+            enum: ['tecnico', 'magazzino', 'ordine', 'cliente', 'personale', 'altro'],
+        },
+        summary: { type: String },
+        adminSuggestion: { type: String },
+        source: { type: String, enum: ['ai', 'heuristic'], default: 'heuristic' },
+        generatedAt: { type: Date },
+    },
+    assignedDepartment: {
+        type: String,
+        enum: ['tecnico', 'magazzino', 'ordine', 'cliente', 'personale', 'altro'],
+        default: null,
+        required: false,
+    },
 }, { strict: true, timestamps: true, versionKey: false });
 
 const TicketModel = model('Ticket', TicketSchema);

@@ -4,6 +4,8 @@
 
 .topbar {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 48px;
   min-height: 48px;
 

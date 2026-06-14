@@ -18,13 +18,13 @@ const Sidebar = () => {
   const routes = [
     { to: "board", label: t("overview") },
     { to: "customers", label: t("clienti") },
+    { to: "warehouse", label: t("magazzino") },
+    { to: "orders", label: t("ordiniSidebar") },
+    { to: "ticket", label: t("ticket") },
     {
-      to: isUser ? "personale" : "personale",
+      to: "personale",
       label: isUser ? t("profilo") : t("personale"),
     },
-    { to: "warehouse", label: t("magazzino") },
-    { to: "ticket", label: t("ticket") },
-    { to: "orders", label: t("ordiniSidebar") },
   ];
 
   // Determines whether a route should be marked as active
@@ -49,7 +49,7 @@ const Sidebar = () => {
   };
 
   return (
-    <nav className="sidebar-nav flex flex-col gap-12 items-stretch w-full px-3 transition-all duration-300">
+    <nav className="sidebar-nav w-full transition-all duration-300">
       {routes.map((item) => {
         const active = isRouteActive(item.to);
 

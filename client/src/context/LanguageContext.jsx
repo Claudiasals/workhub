@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { it } from "../lang/translations_it";
 import { en } from "../lang/translations_en";
 
@@ -14,19 +14,21 @@ export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(localStorage.getItem("lang") || "it");
 
   // Toggle between supported languages
-  const toggleLang = (targetLang) => {
-    const newLang =
-      targetLang && translations[targetLang]
-        ? targetLang
-        : lang === "it"
-          ? "en"
-          : "it";
-    setLang(newLang);
-    localStorage.setItem("lang", newLang);
-  };
+  const toggleLang = useCallback((targetLang) => {
+    setLang((current) => {
+      const newLang =
+        targetLang && translations[targetLang]
+          ? targetLang
+          : current === "it"
+            ? "en"
+            : "it";
+      localStorage.setItem("lang", newLang);
+      return newLang;
+    });
+  }, []);
 
-  // Translation helper with dot-notation support
-  const t = (key) => {
+  // Translation helper with dot-notation support — stable reference per language
+  const t = useCallback((key) => {
     const parts = key.split(".");
     let value = translations[lang];
 
@@ -36,15 +38,20 @@ export const LanguageProvider = ({ children }) => {
     }
 
     return value;
-  };
+  }, [lang]);
 
   // Sync HTML lang attribute with selected language
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
+  const value = useMemo(
+    () => ({ lang, toggleLang, t }),
+    [lang, toggleLang, t]
+  );
+
   return (
-    <LanguageContext.Provider value={{ lang, toggleLang, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

@@ -186,6 +186,13 @@ table tr {
   padding: 4px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+}
+
+.table-action-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .table-action-btn:hover {
@@ -214,6 +221,8 @@ table tr {
 
 .table-container {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 0.75rem;
@@ -273,6 +282,9 @@ table tr {
   gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .table-toolbar-left {
@@ -280,6 +292,8 @@ table tr {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .table-toolbar-title {
@@ -290,8 +304,9 @@ table tr {
 }
 
 .table-toolbar-search {
-  flex: 1 1 18rem;
-  min-width: min(100%, 14rem);
+  flex: 0 1 15rem;
+  min-width: 0;
+  max-width: 15rem;
 }
 
 .table-toolbar-right {
@@ -301,6 +316,8 @@ table tr {
   align-items: center;
   justify-content: flex-end;
   margin-left: auto;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 /* Search input — EXACT original behavior */
@@ -323,10 +340,18 @@ table tr {
   .orders-search {
     width: 15rem;
   }
+
+  .dashboard-card-search.table-search,
+  .card-toolbar-search.table-search {
+    width: auto !important;
+    max-width: 15rem;
+  }
 }
 
 .table-toolbar-search .table-search {
   width: 100%;
+  min-width: 0;
+  max-width: 15rem;
 }
 
 @media (max-width: 700px) {
@@ -344,8 +369,16 @@ table tr {
 
 .dashboard-card-search {
   flex: 0 1 15rem;
-  width: 15rem;
-  max-width: 36vw;
+  min-width: 4.5rem;
+  width: auto !important;
+  max-width: 15rem;
+}
+
+.card-toolbar-search {
+  flex: 0 1 15rem;
+  min-width: 4.5rem;
+  width: auto !important;
+  max-width: 15rem;
 }
 
 .ticket-user-search {
@@ -416,7 +449,8 @@ table tr {
 }
 
 .table-container-embedded .table-actions {
-  height: 46px;
+  height: auto;
+  min-height: 46px;
 }
 
 .orders-table-base th.orders-cell-left,

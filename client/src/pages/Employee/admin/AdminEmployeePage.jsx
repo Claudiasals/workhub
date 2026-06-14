@@ -3,9 +3,9 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
   UsersThreeIcon,
   UserCircleMinusIcon,
-  NotePencilIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
+import EditIcon from "../../../components/EditIcon";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -246,10 +246,8 @@ const AdminEmployeePage = () => {
           {
             name: "edit",
             icon: (
-              <NotePencilIcon
-                size={26}
+              <EditIcon
                 color={theme === "dark" ? "white" : "#090c64"}
-                weight="duotone"
               />
             ),
             onClick: (row) => openEditDrawer(row.raw),
@@ -258,7 +256,7 @@ const AdminEmployeePage = () => {
             name: "delete",
             icon: (
               <TrashIcon
-                size={16}
+                size={20}
                 color={theme === "dark" ? "#ff4d4d" : "#ff0000"}
                 weight="duotone"
               />

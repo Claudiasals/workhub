@@ -77,7 +77,7 @@ const Table = ({
 
   return (
     <div
-      className={`table-container ${
+      className={`table-container min-w-0 max-w-full ${
         isEmbedded ? "table-container-embedded" : "table-wrapper"
       }`}
     >
@@ -109,7 +109,7 @@ const Table = ({
                 placeholder={t("cerca")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="table-search"
+                className="table-search !w-auto min-w-0 max-w-[15rem]"
               />
             </div>
           )}
@@ -182,7 +182,11 @@ const Table = ({
                     {actions.map((action) => (
                       <button
                         key={action.name}
-                        className="table-action-btn"
+                        className={`table-action-btn${
+                          action.name === "edit" ? " table-action-btn--edit" : ""
+                        }${
+                          action.name === "delete" ? " table-action-btn--delete" : ""
+                        }`}
                         onClick={(e) => {
                           e.stopPropagation();
                           action.onClick?.(row);

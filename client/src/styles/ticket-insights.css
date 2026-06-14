@@ -1,0 +1,165 @@
+.ticket-ai-insights-compact {
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.ticket-ai-insights-wrap {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0;
+}
+
+.ticket-ai-insights-wrap + .app-surface {
+  position: relative;
+  z-index: 2;
+}
+
+.ticket-ai-insights-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ticket-ai-insights-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ticket-ai-insights-panel__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .ticket-ai-insights-panel__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.ticket-ai-insights-panel__column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(9, 12, 100, 0.08);
+  background: rgba(255, 255, 255, 0.35);
+  padding: 1rem;
+}
+
+.dark .ticket-ai-insights-panel__column {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ticket-ai-insights-panel__subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.ticket-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ticket-insight-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border-radius: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid transparent;
+}
+
+.ticket-insight-item__icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.ticket-insight-item__body {
+  min-width: 0;
+}
+
+.ticket-insight-item__title {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.ticket-insight-item__desc {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  margin: 0.25rem 0 0;
+  opacity: 0.85;
+}
+
+.ticket-insight-item--critical {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #991b1b;
+}
+
+.dark .ticket-insight-item--critical {
+  color: #fecaca;
+}
+
+.ticket-insight-item--warning {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #92400e;
+}
+
+.dark .ticket-insight-item--warning {
+  color: #fde68a;
+}
+
+.ticket-insight-item--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+}
+
+.dark .ticket-insight-item--info {
+  color: #bfdbfe;
+}
+
+.ticket-insight-item--insight {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.2);
+  color: #065f46;
+}
+
+.dark .ticket-insight-item--insight {
+  color: #a7f3d0;
+}
+
+.ticket-insights-empty,
+.ticket-insights-loading,
+.ticket-insights-error {
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+.ticket-insights-error {
+  color: #dc2626;
+}
+
+.dark .ticket-insights-error {
+  color: #fca5a5;
+}

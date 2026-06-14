@@ -6,6 +6,10 @@
   border-color: rgba(255, 255, 255, 0.3);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dark .warehouse-wrapper {
@@ -15,6 +19,9 @@
 
 .warehouse-toolbar {
   @apply flex flex-wrap items-center gap-3 mb-3;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .warehouse-toolbar-left,
@@ -23,20 +30,25 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .warehouse-toolbar-search {
-  flex: 1 1 18rem;
-  min-width: min(100%, 16rem);
+  flex: 0 1 15rem;
+  min-width: 0;
+  max-width: 15rem;
 }
 
 .warehouse-toolbar-actions {
   margin-left: auto;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .warehouse-search {
   width: 100%;
+  min-width: 0;
+  max-width: 15rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid white;
   border-radius: 0.75rem;
@@ -244,6 +256,8 @@
 /* ===== WAREHOUSE PAGE ===== */
 .warehouse-page {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -252,6 +266,8 @@
 
 .warehouse-container {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 24px;

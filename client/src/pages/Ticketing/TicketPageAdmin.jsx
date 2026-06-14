@@ -1,25 +1,40 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTickets, updateTicketAsync } from "../../store/feature/ticketSlice";
+import { fetchTicketInsightsRequest } from "../../api/aiApi";
 
 import {
   ListMagnifyingGlassIcon,
-  PencilIcon,
   CalendarDotsIcon,
   UserListIcon,
   CircleIcon,
   UserCircleIcon,
 } from "@phosphor-icons/react";
 
-import { LineChart } from "@mui/x-charts/LineChart";
+import TicketAiInsightsPanel from "../../components/ticketing/TicketAiInsightsPanel";
 import { DateRangePicker } from "react-date-range";
 import { addDays } from "date-fns";
+
+import {
+  TicketAiLabels,
+  TicketClassificationCard,
+} from "../../components/ai/AiInsightPanel";
+import TicketAiReplyAssistant from "../../components/ticketing/TicketAiReplyAssistant";
+import TicketAssignmentPanel from "../../components/ticketing/TicketAssignmentPanel";
 
 import bgLight from "../../assets/bg/bg.jpg";
 import bgDark from "../../assets/bg/bgScuro.jpg";
 
 import { useLanguage } from "../../context/LanguageContext";
 import { useTheme } from "../../context/ThemeContext";
+import {
+  getDisplayAiClassification,
+  getTicketAiPriorityFilter,
+  getTicketDepartmentLabelKey,
+  hasValidAiClassification,
+  sortTicketsByAiPriority,
+} from "../../utils/ticketAiClassification";
+import { analyzeTicketInsightsLocal } from "../../utils/ticketInsightsAnalyzer";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -60,6 +75,14 @@ const demoTickets = [
     user: demoUsers[0],
     createdAt: daysAgo(2),
     updatedAt: daysAgo(1),
+    aiClassification: {
+      priority: "alta",
+      category: "tecnico",
+      summary: "Scanner non sincronizza giacenze magazzino Milano",
+      adminSuggestion: "Verificare connettività scanner e sincronizzazione API magazzino.",
+      source: "heuristic",
+      generatedAt: daysAgo(2),
+    },
   },
   {
     _id: "demo-ticket-2",
@@ -70,6 +93,14 @@ const demoTickets = [
     user: demoUsers[2],
     createdAt: daysAgo(5),
     updatedAt: daysAgo(3),
+    aiClassification: {
+      priority: "media",
+      category: "ordine",
+      summary: "Richiesta permessi report ordini",
+      adminSuggestion: "Abilitare ruolo report ordini per il capo reparto.",
+      source: "heuristic",
+      generatedAt: daysAgo(5),
+    },
   },
   {
     _id: "demo-ticket-3",
@@ -80,13 +111,21 @@ const demoTickets = [
     user: demoUsers[1],
     createdAt: daysAgo(9),
     updatedAt: daysAgo(8),
+    aiClassification: {
+      priority: "bassa",
+      category: "tecnico",
+      summary: "Upload PDF prodotto bloccato in attesa",
+      adminSuggestion: "Controllare dimensione PDF e timeout upload allegati.",
+      source: "heuristic",
+      generatedAt: daysAgo(9),
+    },
   },
   {
     _id: "demo-ticket-4",
-    name: "Aggiornare priorita bacheca",
+    name: "Richiesta informazioni orari punto vendita",
     content:
-      "La bacheca deve mostrare in alto gli avvisi piu recenti per il team operativo.",
-    status: "closed",
+      "Un cliente chiede chiarimenti sugli orari di apertura del negozio di Roma.",
+    status: "open",
     user: demoUsers[0],
     createdAt: daysAgo(14),
     updatedAt: daysAgo(12),
@@ -100,6 +139,14 @@ const demoTickets = [
     user: demoUsers[2],
     createdAt: daysAgo(20),
     updatedAt: daysAgo(18),
+    aiClassification: {
+      priority: "alta",
+      category: "magazzino",
+      summary: "Giacenze sotto soglia dopo rifornimento",
+      adminSuggestion: "Riconciliare giacenze e verificare movimenti di magazzino recenti.",
+      source: "heuristic",
+      generatedAt: daysAgo(20),
+    },
   },
 ];
 
@@ -108,15 +155,24 @@ const TicketPageAdmin = () => {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const chartTextColor = isDark ? "#ffffff" : "#090c64";
 
   /* REDUX STATE */
   const tickets = useSelector((state) => state.tickets.tickets) || [];
   const users = useSelector((state) => state.tickets.users) || [];
   const status = useSelector((state) => state.tickets.status);
   const error = useSelector((state) => state.tickets.error);
-  const isDemoMode = tickets.length === 0 && status !== "loading";
-  const visibleTickets = isDemoMode ? demoTickets : tickets;
+  const token = useSelector((state) => state.auth.token);
+  const isDemoMode = status === "succeeded" && tickets.length === 0;
+  const [demoOverrides, setDemoOverrides] = useState({});
+  const visibleTickets = useMemo(
+    () =>
+      isDemoMode
+        ? demoTickets.map((ticket) =>
+            demoOverrides[ticket._id] ? { ...ticket, ...demoOverrides[ticket._id] } : ticket
+          )
+        : tickets,
+    [isDemoMode, tickets, demoOverrides]
+  );
   const visibleUsers = isDemoMode ? demoUsers : users;
 
   /* LOCAL STATE */
@@ -128,15 +184,19 @@ const TicketPageAdmin = () => {
 
   const [selectedStatus, setSelectedStatus] = useState("");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [selectedAiPriority, setSelectedAiPriority] = useState("");
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [highlightDate, setHighlightDate] = useState("");
 
   const itemRefs = useRef({});
 
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState("");
+  const [ticketInsights, setTicketInsights] = useState(null);
+
   /* Local status map for optimistic UI updates */
   const [ticketStatus, setTicketStatus] = useState({});
-  const [hiddenLines, setHiddenLines] = useState([]);
   const [dateRangeTouched, setDateRangeTouched] = useState(false);
 
   const [dateRange, setDateRange] = useState([
@@ -163,13 +223,22 @@ const TicketPageAdmin = () => {
     const today = new Date();
     const endDate = latestTicketDate > today ? latestTicketDate : today;
 
-    setDateRange([
-      {
-        startDate,
-        endDate,
-        key: "selection",
-      },
-    ]);
+    setDateRange((prev) => {
+      const current = prev[0];
+      if (
+        current?.startDate?.getTime() === startDate.getTime() &&
+        current?.endDate?.getTime() === endDate.getTime()
+      ) {
+        return prev;
+      }
+      return [
+        {
+          startDate,
+          endDate,
+          key: "selection",
+        },
+      ];
+    });
   }, [dateRangeTouched, visibleTickets]);
 
   /* INITIAL LOAD */
@@ -192,11 +261,21 @@ const TicketPageAdmin = () => {
       map[id] = s;
     });
 
-    setTicketStatus(map);
+    setTicketStatus((prev) => {
+      const prevKeys = Object.keys(prev);
+      const mapKeys = Object.keys(map);
+      if (
+        prevKeys.length === mapKeys.length &&
+        mapKeys.every((key) => prev[key] === map[key])
+      ) {
+        return prev;
+      }
+      return map;
+    });
   }, [visibleTickets]);
 
-  /* FILTERED TICKETS */
-  const filteredTickets = useMemo(() => {
+  /* FILTERED TICKETS (periodo, utente, stato) */
+  const baseFilteredTickets = useMemo(() => {
     const start = dateRange[0]?.startDate;
     const end = dateRange[0]?.endDate;
 
@@ -216,120 +295,116 @@ const TicketPageAdmin = () => {
     });
   }, [visibleTickets, dateRange, selectedUser, selectedStatus, ticketStatus]);
 
-  /* CHART DATA */
-  const chartData = useMemo(() => {
-    const grouped = {};
+  const filteredTickets = useMemo(() => {
+    if (!selectedAiPriority) return baseFilteredTickets;
 
-    filteredTickets.forEach((ticket) => {
-      const rawDate = ticket.date || ticket.createdAt || ticket.updatedAt || new Date().toISOString();
-      const key = rawDate.split("T")[0];
+    return baseFilteredTickets.filter(
+      (ticket) => getTicketAiPriorityFilter(ticket) === selectedAiPriority
+    );
+  }, [baseFilteredTickets, selectedAiPriority]);
 
-      if (!grouped[key]) {
-        grouped[key] = { date: key, aperti: 0, risolti: 0, totale: 0 };
+  const loadTicketInsights = useCallback(async () => {
+    if (status === "idle" || status === "loading") return;
+
+    setInsightsLoading(true);
+    setInsightsError("");
+    try {
+      if (isDemoMode) {
+        setTicketInsights(analyzeTicketInsightsLocal(demoTickets));
+      } else if (token) {
+        const data = await fetchTicketInsightsRequest(token);
+        setTicketInsights(data);
       }
+    } catch (err) {
+      setInsightsError(err.message || t("aiError"));
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, [isDemoMode, token, t, status]);
 
-      const id = ticket._id || ticket.id;
-      const s = ticketStatus[id];
+  useEffect(() => {
+    loadTicketInsights();
+  }, [loadTicketInsights]);
 
-      if (s === "aperto") grouped[key].aperti++;
-      if (s === "risolto") grouped[key].risolti++;
+  const urgentCount = useMemo(
+    () =>
+      baseFilteredTickets.filter(
+        (ticket) => getTicketAiPriorityFilter(ticket) === "alta"
+      ).length,
+    [baseFilteredTickets]
+  );
 
-      grouped[key].totale++;
+  const aiPriorityCounts = useMemo(() => {
+    const counts = { alta: 0, media: 0, bassa: 0, none: 0 };
+    baseFilteredTickets.forEach((ticket) => {
+      const key = getTicketAiPriorityFilter(ticket);
+      counts[key] = (counts[key] || 0) + 1;
     });
-
-    return Object.values(grouped);
-  }, [filteredTickets, ticketStatus]);
-
-  const totals = useMemo(() => {
-    return chartData.reduce(
-      (acc, d) => {
-        acc.aperti += d.aperti;
-        acc.risolti += d.risolti;
-        acc.totale += d.totale;
-        return acc;
-      },
-      { aperti: 0, risolti: 0, totale: 0 }
-    );
-  }, [chartData]);
-
-  const toggleLine = (key) => {
-    setHiddenLines((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
+    return counts;
+  }, [baseFilteredTickets]);
 
   const formatDate = (d) =>
     new Date(d).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 
   /* RENDER */
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-4 h-full min-w-0 w-full">
 
-      {/* TOOLBAR (SINGLE ROW) */}
-      <nav className="app-surface p-4">
-        <div className="flex items-center justify-between gap-6">
-
-          {/* LEFT: title */}
-          <div className="flex items-center gap-3">
-            <ListMagnifyingGlassIcon
-              size={24}
-              weight="duotone"
-              color={theme === "dark" ? "white" : "#090c64"}
-              className="preserve-icon-size shrink-0"
-            />
-            <h1 className="text-lg font-bold">{t("ticket")}</h1>
+      {/* Barra filtri: periodo, utente, stato */}
+      <nav className="app-surface ticket-admin-filters p-4 min-w-0">
+        <div className="ticket-admin-filters__row">
+          <div className="ticket-admin-filters__title">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold leading-tight">{t("ticket")}</h1>
+              <p className="ticket-admin-filters__desc">{t("ticketFiltersDesc")}</p>
+            </div>
           </div>
 
-          {/* RIGHT: filters */}
-          <div className="flex items-center gap-4">
-
-            {/* Calendar */}
+          <div className="ticket-admin-filters__controls">
             <button
               onClick={() => setCalendarOpen(true)}
-              className="custom-button flex items-center gap-2"
+              className="custom-button ticket-admin-filters__date-btn shrink-0 whitespace-nowrap"
               type="button"
             >
               <CalendarDotsIcon size={20} weight="duotone" />
-              <span className="hidden lg:inline">{t("selezionaIntervalloData")}</span>
-              <span className="lg:hidden">Date</span>
+              {t("selezionaIntervalloData")}
             </button>
 
-            {/* User search */}
-            <div className="relative w-64">
+            <div className="ticket-admin-filters__search">
               <UserListIcon
                 size={20}
                 weight="duotone"
                 color={theme === "dark" ? "white" : "#090c64"}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
+                className="ticket-admin-filters__search-icon"
               />
 
               <input
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder={t("cercaUtente")}
-                className="ticket-user-search"
+                className="ticket-user-search !w-full min-w-0"
               />
 
               {userSearch && (
                 <button
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                  className="ticket-admin-filters__clear"
                   onClick={() => {
                     setUserSearch("");
                     setSelectedUser("");
                   }}
                   type="button"
+                  aria-label={t("annulla")}
                 >
                   ✕
                 </button>
               )}
 
-              {/* Dropdown results */}
-                  {userSearch && (
+              {userSearch && (
                 <div
-                  className={`absolute top-full mt-1 w-full rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto ${
+                  className={`ticket-admin-filters__dropdown ${
                     isDark
                       ? "bg-[#1a1a2e] text-white border border-white/20"
-                      : "bg-white"
+                      : "bg-white border border-[#090c64]/10"
                   }`}
                 >
                   <div
@@ -337,7 +412,7 @@ const TicketPageAdmin = () => {
                       setSelectedUser("");
                       setUserSearch("");
                     }}
-                    className={`px-3 py-2 cursor-pointer border-b ${
+                    className={`ticket-admin-filters__dropdown-item border-b ${
                       isDark
                         ? "border-white/10 hover:bg-white/10"
                         : "hover:bg-blue-50"
@@ -365,7 +440,7 @@ const TicketPageAdmin = () => {
                             setSelectedUser(userId);
                             setUserSearch(`${first} ${last}`);
                           }}
-                          className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                          className={`ticket-admin-filters__dropdown-item ${
                             isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
                           }`}
                         >
@@ -374,7 +449,9 @@ const TicketPageAdmin = () => {
                             weight="duotone"
                             color={theme === "dark" ? "white" : "#090c64"}
                           />
-                          <span className="text-sm">{first} {last}</span>
+                          <span className="text-sm truncate">
+                            {first} {last}
+                          </span>
                         </div>
                       );
                     })}
@@ -382,18 +459,17 @@ const TicketPageAdmin = () => {
               )}
             </div>
 
-            {/* Status filter */}
-            <div className="relative w-40">
+            <div className="ticket-admin-filters__status">
               <CircleIcon
                 size={20}
                 weight="duotone"
                 color={theme === "dark" ? "white" : "#090c64"}
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                className="ticket-admin-filters__status-icon"
               />
 
               <button
                 onClick={() => setStatusDropdownOpen((v) => !v)}
-                className={`pl-10 pr-6 py-2 w-full rounded-lg border text-left ${
+                className={`ticket-admin-filters__status-btn ${
                   isDark
                     ? "border-white/25 bg-white/10 text-white"
                     : "border-gray-300 bg-white/70 text-[#090c64]"
@@ -405,16 +481,16 @@ const TicketPageAdmin = () => {
                 {selectedStatus === "risolto" && t("risolti")}
               </button>
 
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <span className="ticket-admin-filters__status-caret">
                 {statusDropdownOpen ? "▲" : "▼"}
               </span>
 
               {statusDropdownOpen && (
                 <div
-                  className={`absolute top-full mt-1 w-full rounded-xl shadow-lg z-50 overflow-hidden ${
+                  className={`ticket-admin-filters__dropdown ${
                     isDark
                       ? "bg-[#1a1a2e] text-white border border-white/20"
-                      : "bg-white"
+                      : "bg-white border border-[#090c64]/10"
                   }`}
                 >
                   <div
@@ -422,7 +498,7 @@ const TicketPageAdmin = () => {
                       setSelectedStatus("");
                       setStatusDropdownOpen(false);
                     }}
-                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                    className={`ticket-admin-filters__dropdown-item ${
                       isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
                     }`}
                   >
@@ -439,7 +515,7 @@ const TicketPageAdmin = () => {
                       setSelectedStatus("aperto");
                       setStatusDropdownOpen(false);
                     }}
-                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                    className={`ticket-admin-filters__dropdown-item ${
                       isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
                     }`}
                   >
@@ -452,7 +528,7 @@ const TicketPageAdmin = () => {
                       setSelectedStatus("risolto");
                       setStatusDropdownOpen(false);
                     }}
-                    className={`px-3 py-2 cursor-pointer flex items-center gap-2 ${
+                    className={`ticket-admin-filters__dropdown-item ${
                       isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
                     }`}
                   >
@@ -543,93 +619,18 @@ const TicketPageAdmin = () => {
         </div>
       )}
 
-      {/* MAIN LAYOUT (SIDE BY SIDE) */}
-      <div className="flex gap-6">
-        {/* LEFT: chart */}
-        <div className="w-3/5 app-surface p-6">
-          <h2
-            className={`mb-4 text-lg font-bold ${
-              isDark ? "text-white" : "text-[#090c64]"
-            }`}
-          >
-            {t("andamentoTicket")}
-          </h2>
+      <div className="ticket-ai-insights-wrap min-w-0 w-full shrink-0">
+        <TicketAiInsightsPanel
+          data={ticketInsights}
+          loading={insightsLoading}
+          error={insightsError}
+          onRefresh={loadTicketInsights}
+          source={ticketInsights?.source}
+        />
+      </div>
 
-          {/* Interactive legend */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            {["aperti", "risolti", "totale"].map((key) => (
-              <button
-                key={key}
-                onClick={() => toggleLine(key)}
-                className={`px-4 py-1.5 rounded-xl font-bold text-sm border shadow-sm transition ${
-                  hiddenLines.includes(key)
-                    ? isDark
-                      ? "opacity-40 bg-white/5 text-white border-white/20"
-                      : "opacity-40 bg-gray-100 text-[#090c64]"
-                    : isDark
-                    ? "opacity-100 bg-white/10 text-white border-white/20"
-                    : "opacity-100 bg-white text-[#090c64]"
-                }`}
-                type="button"
-              >
-                {t(key)} ({totals[key]})
-              </button>
-            ))}
-          </div>
-
-          <LineChart
-            dataset={chartData}
-            xAxis={[
-              {
-                dataKey: "date",
-                scaleType: "band",
-                valueFormatter: (value) => formatDate(value),
-              },
-            ]}
-            series={[
-              { dataKey: "aperti", label: t("aperti"), color: "#3B82F6" },
-              { dataKey: "risolti", label: t("risolti"), color: "#F59E0B" },
-              { dataKey: "totale", label: t("totale"), color: isDark ? "#ffffff" : "#111" },
-            ].filter((s) => !hiddenLines.includes(s.dataKey))}
-            height={360}
-            sx={{
-              "& .MuiChartsAxis-line": { stroke: chartTextColor },
-              "& .MuiChartsAxis-tick": { stroke: chartTextColor },
-              "& .MuiChartsAxis-tickLabel": { fill: chartTextColor },
-              "& .MuiChartsAxis-label": { fill: chartTextColor },
-              "& .MuiChartsLegend-label": { fill: chartTextColor },
-              "& .MuiChartsLegend-series text": { fill: chartTextColor },
-              "& .MuiChartsGrid-line": {
-                stroke: isDark
-                  ? "rgba(255,255,255,0.16)"
-                  : "rgba(9,12,100,0.15)",
-              },
-            }}
-            onPointClick={(point) => {
-              const clickedDate = point.x;
-              setHighlightDate(clickedDate);
-
-              const ticketsOnDate = filteredTickets.filter((ticket) => {
-                const raw = ticket.date || ticket.createdAt || ticket.updatedAt || "";
-                return raw.split("T")[0] === clickedDate;
-              });
-
-              if (ticketsOnDate.length > 0) {
-                setSelectedTicket(ticketsOnDate[0]);
-                setDrawerOpen(true);
-
-                const id = ticketsOnDate[0]._id || ticketsOnDate[0].id;
-                const el = itemRefs.current[id];
-                if (el && el.scrollIntoView) {
-                  el.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-              }
-            }}
-          />
-        </div>
-
-        {/* RIGHT: list */}
-        <div className="w-2/5 app-surface p-6">
+      {/* Lista ticket */}
+      <div className="w-full min-w-0 app-surface p-6">
           <h2
             className={`mb-4 flex items-center gap-2 text-lg font-bold ${
               isDark ? "text-white" : "text-[#090c64]"
@@ -639,14 +640,44 @@ const TicketPageAdmin = () => {
             {t("listaTicket")}
           </h2>
 
+          <p className={`text-xs mb-3 ${isDark ? "text-white/70" : "text-gray-600"}`}>
+            {t("aiTicketListAiHint")}
+            {selectedAiPriority === "none" && (
+              <span className="block mt-1 opacity-90">{t("aiUnclassifiedHint")}</span>
+            )}
+            {urgentCount > 0 && (
+              <span className="font-bold text-red-600 dark:text-red-300">
+                {" "}
+                · {urgentCount} {t("aiPriorityAlta").toLowerCase()}
+              </span>
+            )}
+          </p>
+
+          <div className="ticket-ai-priority-filters">
+            {[
+              { key: "", label: t("aiFilterAllPriorities"), count: baseFilteredTickets.length },
+              { key: "alta", label: t("aiPriorityAlta"), urgent: true, count: aiPriorityCounts.alta },
+              { key: "media", label: t("aiPriorityMedia"), count: aiPriorityCounts.media },
+              { key: "bassa", label: t("aiPriorityBassa"), count: aiPriorityCounts.bassa },
+              { key: "none", label: t("aiUnclassified"), count: aiPriorityCounts.none },
+            ].map(({ key, label, urgent, count }) => (
+              <button
+                key={key || "all"}
+                type="button"
+                onClick={() => setSelectedAiPriority(key)}
+                className={`ticket-ai-priority-filters__btn${
+                  selectedAiPriority === key ? " is-active" : ""
+                }${urgent ? " ticket-ai-priority-filters__btn--urgent" : ""}`}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col gap-2">
             {filteredTickets
               .slice()
-              .sort((a, b) => {
-                const da = new Date(a.date || a.createdAt || a.updatedAt);
-                const db = new Date(b.date || b.createdAt || b.updatedAt);
-                return db - da;
-              })
+              .sort(sortTicketsByAiPriority)
               .map((ticket) => {
                 const id = ticket._id || ticket.id;
                 const s = ticketStatus[id];
@@ -656,6 +687,8 @@ const TicketPageAdmin = () => {
 
                 const statusLabel =
                   s === "risolto" ? t("risolti") : t("aperti");
+                const isUrgent = getTicketAiPriorityFilter(ticket) === "alta";
+                const displayClassification = getDisplayAiClassification(ticket);
 
                 return (
                   <div
@@ -663,7 +696,7 @@ const TicketPageAdmin = () => {
                     ref={(el) => (itemRefs.current[id] = el)}
                     className={`ticket-list-card p-3 rounded-lg flex justify-between items-start cursor-pointer transition hover:shadow-md ${
                       isHighlighted ? "ring-2 ring-blue-100 dark:ring-white/30" : ""
-                    }`}
+                    }${isUrgent ? " ticket-list-card--ai-urgent" : ""}`}
                     onClick={() => {
                       setSelectedTicket(ticket);
                       setHighlightDate(raw.split("T")[0] || "");
@@ -671,15 +704,30 @@ const TicketPageAdmin = () => {
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div
-                        className={`text-sm font-semibold truncate ${
-                          isDark ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        {ticket.title || ticket.name}
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <div
+                          className={`text-sm font-semibold truncate ${
+                            isDark ? "text-white" : "text-gray-900"
+                          }`}
+                        >
+                          {ticket.title || ticket.name}
+                        </div>
                       </div>
+
+                      <TicketAiLabels
+                        classification={displayClassification}
+                        showSummary
+                      />
+
+                      {ticket.assignedDepartment && (
+                        <span className="ticket-ai-label ticket-ai-label--category ai-category-badge text-xs mt-1">
+                          {t("ticketAssignedShort")}:{" "}
+                          {t(getTicketDepartmentLabelKey(ticket.assignedDepartment))}
+                        </span>
+                      )}
+
                       <div
-                        className={`text-xs mt-1 ${
+                        className={`text-xs mt-1.5 ${
                           isDark ? "text-white/70" : "text-gray-600"
                         }`}
                       >
@@ -698,7 +746,7 @@ const TicketPageAdmin = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 ml-3">
+                    <div className="flex shrink-0 items-center gap-2 ml-3">
                       <span
                         className={`ticket-status-pill text-xs px-3 py-1 rounded-lg font-semibold shrink-0 ${
                           s === "risolto" ? "is-closed" : "is-open"
@@ -706,18 +754,23 @@ const TicketPageAdmin = () => {
                       >
                         {statusLabel}
                       </span>
-                      <PencilIcon
-                        size={18}
-                        color={isDark ? "white" : "#090c64"}
-                        weight="duotone"
-                        className="shrink-0"
-                      />
+                      <button
+                        type="button"
+                        className="custom-button shrink-0 whitespace-nowrap text-xs px-3 py-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTicket(ticket);
+                          setHighlightDate(raw.split("T")[0] || "");
+                          setDrawerOpen(true);
+                        }}
+                      >
+                        {t("gestisci")}
+                      </button>
                     </div>
                   </div>
                 );
               })}
           </div>
-        </div>
       </div>
 
       {/* DRAWER */}
@@ -813,9 +866,39 @@ const TicketPageAdmin = () => {
                         {selectedTicket.description || selectedTicket.content}
                       </p>
                     </div>
+
+                    {hasValidAiClassification(selectedTicket) && (
+                      <div className="mt-2">
+                        <p className="text-xs font-bold mb-2 opacity-80">{t("aiTicketInsights")}</p>
+                        <TicketClassificationCard
+                          classification={getDisplayAiClassification(selectedTicket)}
+                        />
+                      </div>
+                    )}
+
+                    <TicketAssignmentPanel
+                      ticket={selectedTicket}
+                      isDemoMode={isDemoMode}
+                      onAssigned={(updated) => {
+                        setSelectedTicket(updated);
+                        if (isDemoMode) {
+                          const id = updated._id || updated.id;
+                          setDemoOverrides((prev) => ({
+                            ...prev,
+                            [id]: { assignedDepartment: updated.assignedDepartment },
+                          }));
+                        }
+                      }}
+                    />
                   </div>
 
-                  <div className="flex flex-col gap-2 mb-4">
+                  <TicketAiReplyAssistant
+                    ticket={selectedTicket}
+                    token={token}
+                    isDemoMode={isDemoMode}
+                  />
+
+                  <div className="flex flex-col gap-2 mb-4 mt-4">
                     <button
                       type="button"
                       className="ticket-status-btn ticket-status-btn-open"

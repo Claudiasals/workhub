@@ -1,0 +1,397 @@
+/* AI panels — same glass style as app-surface cards */
+
+.ai-insight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background-color: rgba(9, 12, 100, 0.12);
+  color: #090c64;
+  border: 1px solid rgba(9, 12, 100, 0.2);
+}
+
+.dark .ai-insight-badge {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ai-insight-loading {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.ai-insight-spinner {
+  flex-shrink: 0;
+  animation: ai-insight-spin 0.85s linear infinite;
+}
+
+@keyframes ai-insight-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-insight-error {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.dark .ai-insight-error {
+  color: #fca5a5;
+}
+
+.ai-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ai-alert-item {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.42);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: inherit;
+}
+
+.dark .ai-alert-item {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.ai-alert-item--high {
+  background-color: #fee2e2;
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #991b1b;
+}
+
+.dark .ai-alert-item--high {
+  background-color: rgba(127, 29, 29, 0.55);
+  border-color: rgba(252, 165, 165, 0.45);
+  color: #fecaca;
+}
+
+.ai-alert-item--medium {
+  background-color: #fef3c7;
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #92400e;
+}
+
+.dark .ai-alert-item--medium {
+  background-color: rgba(120, 53, 15, 0.55);
+  border-color: rgba(252, 211, 77, 0.45);
+  color: #fde68a;
+}
+
+.ai-alert-item--low {
+  background-color: #e0e7ff;
+  border-color: rgba(9, 12, 100, 0.25);
+  color: #090c64;
+}
+
+.dark .ai-alert-item--low {
+  background-color: rgba(9, 12, 100, 0.55);
+  border-color: rgba(142, 162, 255, 0.45);
+  color: #dbeafe;
+}
+
+.ai-alert-item--info {
+  background-color: rgba(9, 12, 100, 0.08);
+  border-color: rgba(9, 12, 100, 0.22);
+  color: #090c64;
+}
+
+.dark .ai-alert-item--info {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.ai-classification-card {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.42);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.dark .ai-classification-card {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.ai-priority-badge {
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.42);
+  color: inherit;
+}
+
+.dark .ai-priority-badge {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.ai-priority-badge--alta {
+  border-left: 3px solid #dc2626;
+}
+
+.ai-priority-badge--media {
+  border-left: 3px solid #d97706;
+}
+
+.ai-priority-badge--bassa {
+  border-left: 3px solid #059669;
+}
+
+.ai-category-badge {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.42);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.dark .ai-category-badge {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.ai-alert-list--compact {
+  gap: 0.375rem;
+}
+
+.ai-alert-item--compact {
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.ai-alert-toggle {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ai-alert-toggle:hover {
+  opacity: 1;
+}
+
+.ai-alert-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.ai-alert-list-wrap--fit {
+  position: relative;
+  min-height: 0;
+}
+
+.ai-alert-list--measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: 100%;
+  left: 0;
+  top: 0;
+  z-index: -1;
+}
+
+.ai-alert-toggle--measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 0;
+  bottom: 0;
+}
+
+.ai-insight-panel--fill {
+  height: 100%;
+}
+
+.ai-insight-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 0.5rem;
+}
+
+.ai-alert-list-wrap--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ticket-ai-labels {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.ticket-ai-labels--compact {
+  margin-top: 0.25rem;
+  gap: 0.25rem;
+}
+
+.ticket-ai-label {
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ticket-ai-label--priority.ai-priority-badge--alta {
+  background-color: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  border-left: 3px solid #dc2626;
+  color: #b91c1c;
+}
+
+.dark .ticket-ai-label--priority.ai-priority-badge--alta {
+  background-color: rgba(220, 38, 38, 0.22);
+  color: #fecaca;
+}
+
+.ticket-ai-label--priority.ai-priority-badge--media {
+  background-color: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.45);
+  border-left: 3px solid #d97706;
+  color: #b45309;
+}
+
+.dark .ticket-ai-label--priority.ai-priority-badge--media {
+  background-color: rgba(217, 119, 6, 0.22);
+  color: #fde68a;
+}
+
+.ticket-ai-label--priority.ai-priority-badge--bassa {
+  background-color: rgba(5, 150, 105, 0.1);
+  border: 1px solid rgba(5, 150, 105, 0.4);
+  border-left: 3px solid #059669;
+  color: #047857;
+}
+
+.dark .ticket-ai-label--priority.ai-priority-badge--bassa {
+  background-color: rgba(5, 150, 105, 0.2);
+  color: #a7f3d0;
+}
+
+.ticket-ai-label--category {
+  background-color: rgba(9, 12, 100, 0.08);
+  border: 1px solid rgba(9, 12, 100, 0.2);
+  color: #090c64;
+}
+
+.dark .ticket-ai-label--category {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: inherit;
+}
+
+.ticket-ai-label--none {
+  background-color: rgba(107, 114, 128, 0.12);
+  border: 1px dashed rgba(107, 114, 128, 0.45);
+  color: #6b7280;
+}
+
+.dark .ticket-ai-label--none {
+  color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ticket-ai-summary {
+  flex: 1 1 100%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.85;
+  line-height: 1.35;
+}
+
+.ticket-list-card--ai-urgent {
+  border-left: 4px solid #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.ticket-ai-priority-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ticket-ai-priority-filters__btn {
+  border-radius: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border: 1px solid rgba(9, 12, 100, 0.15);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.dark .ticket-ai-priority-filters__btn {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.ticket-ai-priority-filters__btn.is-active {
+  opacity: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.ticket-ai-priority-filters__btn:not(.is-active) {
+  opacity: 0.65;
+}
+
+.ticket-ai-priority-filters__btn--urgent.is-active {
+  background-color: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #b91c1c;
+}
+
+.dark .ticket-ai-priority-filters__btn--urgent.is-active {
+  color: #fecaca;
+}

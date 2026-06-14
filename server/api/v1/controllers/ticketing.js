@@ -76,8 +76,8 @@ export const updateTickets = async (req, res) => {
     const updatedTicket = await TicketModel.findByIdAndUpdate(
       id,
       req.body,
-      { new: true } // Return updated document
-    );
+      { new: true, runValidators: true }
+    ).populate("user", "firstName lastName email role department");
 
     if (!updatedTicket) {
       return res.status(404).json({ message: "Ticket not found" });

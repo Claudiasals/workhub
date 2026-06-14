@@ -4,14 +4,15 @@ import { useState, useEffect } from "react";
 
 import { useLanguage } from "../../context/LanguageContext";
 import AppFeedbackModal from "../../components/AppFeedbackModal";
+import EditIcon from "../../components/EditIcon";
 
 import {
-  PencilSimpleIcon,
   FloppyDiskIcon,
   XCircleIcon,
   FileXlsIcon,
 } from "@phosphor-icons/react";
 
+import CustomerAiInsightsCard from "../../components/customers/CustomerAiInsightsCard";
 import {
   fetchCustomerByIdAsync,
   updateCustomerAsync,
@@ -188,16 +189,15 @@ const CustomersRegistry = () => {
       <div className="flex justify-end">
         <Link
           to="/customers"
-          className="inline-flex w-fit text-lg font-bold text-[#090c64] transition hover:underline dark:text-[#8ea2ff]"
+          className="ai-alert-toggle inline-flex w-fit text-[#090c64] dark:text-[#8ea2ff]"
         >
           {"< Torna alla lista clienti"}
         </Link>
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        {/* LEFT COLUMN - PROFILE & AFFILIATION */}
-        <div className="flex min-w-0 flex-col gap-6">
-          <div className="relative custom-box p-6">
+      <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-2">
+        {/* Anagrafica — sinistra */}
+        <div className={`relative custom-box p-6 min-w-0${!customer.affiliateProgram ? " xl:col-span-2" : ""}`}>
         {/* Header actions */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="font-semibold">{t("anagrafica")}</h3>
@@ -207,7 +207,7 @@ const CustomersRegistry = () => {
               onClick={() => setIsEditing(true)}
               className="custom-button-light flex items-center gap-1"
             >
-              <PencilSimpleIcon size={18} />
+              <EditIcon color="#090c64" />
               {t("modifica")}
             </button>
           ) : (
@@ -281,9 +281,9 @@ const CustomersRegistry = () => {
         </div>
       </div>
 
-        {/* Affiliation */}
+        {/* Affiliazione — destra di anagrafica */}
         {customer.affiliateProgram && (
-          <div className="custom-box p-6">
+          <div className="custom-box p-6 min-w-0">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="font-semibold">{t("affiliazione")}</h3>
               <button
@@ -327,11 +327,9 @@ const CustomersRegistry = () => {
             </div>
           </div>
         )}
-        </div>
 
-        {/* RIGHT COLUMN - ORDERS */}
+        {/* Storico ordini — sinistra di AI Consumer Insight */}
         <div className="min-w-0 custom-box p-6">
-        {/* Orders */}
         <div>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-semibold">{t("storicoOrdini")}</h3>
@@ -393,7 +391,15 @@ const CustomersRegistry = () => {
             </div>
           )}
         </div>
+        </div>
 
+        {/* AI Consumer Insight — destra dello storico ordini */}
+        <div className="min-w-0">
+          <CustomerAiInsightsCard
+            customer={customer}
+            customerId={id}
+            token={token}
+          />
         </div>
       </div>
 

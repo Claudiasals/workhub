@@ -159,6 +159,18 @@ Screenshots above show the **standard** experience (mostly `user` or shared view
 | **i18n** | React Context (`LanguageContext`) | IT / EN labels via `translations_it.js` / `translations_en.js` |
 | **Theme** | React Context (`ThemeContext`) | Light / dark + persisted default theme in `localStorage` |
 | **2FA** | `node-2fa` + `qrcode` (backend) | TOTP secret generation and QR code for authenticator apps |
+| **AI operational assist** | OpenAI-compatible API + heuristic fallback (`server/api/v1/services/ai/`) | Ticket classification, warehouse suggestions, shift alerts, internal comms generator — **no chatbot**, embedded in existing flows |
+
+### AI-enabled features (portfolio)
+
+All AI calls go through **`POST /api/v1/ai/*`** on the backend. The API key lives in `AI_API_KEY` (see `server/.env.example`). Without a key, the platform uses **rule-based heuristics** (badge **Demo**) so the portfolio demo always works.
+
+| Feature | Endpoint | UI location |
+|---------|----------|-------------|
+| Ticket classifier | `POST /ai/tickets/classify` | Ticket creation drawer — priority, category, summary, admin suggestion saved on ticket |
+| Warehouse suggestions | `POST /ai/warehouse/suggestions` | Magazzino page (admin) — reorder, low stock, transfers |
+| Shift assistant | `POST /ai/shifts/analyze` | Overview calendar (admin, turni mode) — gaps, overloads, leave conflicts |
+| Communication generator | `POST /ai/communications/generate` | Bacheca event drawer (admin) — keywords → professional announcement |
 
 ### Backend stack
 

@@ -11,6 +11,7 @@ import productRouter from "./routes/product.js";
 import itemsRouter from "./routes/items.js";
 import customersRouter from "./routes/customers.js";
 import ticketingRouter from "./routes/ticketing.js";
+import aiRouter from "./routes/ai.js";
 
 const app = express.Router();
 
@@ -49,5 +50,8 @@ app.use("/customers", customersRouter);
 
 // Ticketing system routes
 app.use("/ticketing", ticketingRouter);
+
+// AI-assisted operational features
+app.use("/ai", aiRouter);
 
 export default app;

@@ -37,7 +37,7 @@ const PublicLayout = () => {
             sidebar-aside
             fixed top-0 left-0 h-full z-40
             transition-all duration-700 ease-in-out
-            border-r flex flex-col w-[190px] md:w-[210px] py-2 px-4
+            border-r flex flex-col overflow-hidden w-[190px] md:w-[210px] py-2 px-4
             ${
               theme === "dark"
                 ? "sidebar-aside-dark"
@@ -47,18 +47,17 @@ const PublicLayout = () => {
         >
           {/* Sidebar logo (click to close) */}
           <div
-            className="flex flex-col items-center gap-2 cursor-pointer -mt-4 mb-1 pt-0 translate-y-[5px]"
+            className="sidebar-logo flex flex-shrink-0 flex-col items-center gap-2 cursor-pointer -mt-4 mb-1 pt-0 translate-y-[5px]"
             onClick={() => setSidebarOpen(false)}
           >
             <img
               src={theme === "dark" ? iconLogo2 : iconLogo}
               alt="Logo"
-              className="w-40 md:w-48 h-auto object-contain drop-shadow-md transition-all duration-700"
+              className="sidebar-logo-img w-40 md:w-48 h-auto object-contain drop-shadow-md transition-all duration-700"
             />
           </div>
 
-          {/* Sidebar navigation — centered in remaining height, shifted up vs pure geometric center */}
-          <div className="sidebar-nav-area flex-1 w-full min-h-0 flex flex-col">
+          <div className="sidebar-nav-area w-full min-h-0">
             <Sidebar />
           </div>
         </aside>
@@ -81,12 +80,16 @@ const PublicLayout = () => {
         </div>
       )}
 
-      {/* Main content area */}
+      {/* Main content area — width must account for sidebar margin, not 100% + margin */}
       <section
         data-main-scroll
         className={`
-          transition-all duration-500 ease-in-out
-          ${sidebarOpen ? "ml-[210px] md:ml-[205px]" : "ml-20 md:ml-[90px]"}
+          transition-all duration-500 ease-in-out box-border min-w-0
+          ${
+            sidebarOpen
+              ? "ml-[190px] md:ml-[210px] w-[calc(100%-190px)] md:w-[calc(100%-210px)]"
+              : "ml-20 md:ml-[90px] w-[calc(100%-5rem)] md:w-[calc(100%-90px)]"
+          }
           mt-6 mb-6
           overflow-y-auto
           pr-4 pl-4 md:pr-8 md:pl-8

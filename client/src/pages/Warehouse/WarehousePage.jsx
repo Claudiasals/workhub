@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { fetchItems, addItem } from "../../store/feature/itemsSlice";
+import { fetchOrders } from "../../store/feature/orderSlice";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { fetchWarehouseSuggestionsRequest } from "../../api/aiApi";
+import { localizeWarehouseSuggestions } from "../../utils/warehouseSuggestionsI18n";
+import { AiAlertList, AiInsightPanel } from "../../components/ai/AiInsightPanel";
 
 import WarehouseTable from "../../components/Warehouse/WarehouseTable";
 import DrawerAddNewProduct from "../../components/Warehouse/DrawerAddNewProduct";
@@ -23,10 +27,10 @@ const isLowStockItem = (item) => getItemStock(item) <= getItemStockLimit(item);
 const WarehousePage = () => {
   const dispatch = useDispatch();
 
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { theme } = useTheme();
+  const token = useSelector((state) => state.auth.token);
 
-  // Redux state
   const items = useSelector((state) => state.items.list);
   const userWorkplace = useSelector((state) => state.auth.user?.workplace);
   const userWorkplaceId =
@@ -36,14 +40,48 @@ const WarehousePage = () => {
 
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
-  // Fetch items on page load
+  const [drawerAddOpen, setDrawerAddOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+
   useEffect(() => {
     if (userWorkplaceId) {
       dispatch(fetchItems());
     }
   }, [userWorkplaceId, dispatch]);
 
-  // Table columns
+  const loadWarehouseAi = useCallback(async () => {
+    if (!token) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const data = await fetchWarehouseSuggestionsRequest(token, lang);
+      setAiSuggestions(data);
+    } catch (err) {
+      setAiError(err.message || t("aiError"));
+    } finally {
+      setAiLoading(false);
+    }
+  }, [token, t, lang]);
+
+  const localizedSuggestions = useMemo(
+    () => localizeWarehouseSuggestions(aiSuggestions?.suggestions || [], t),
+    [aiSuggestions?.suggestions, t]
+  );
+
+  useEffect(() => {
+    if (token) {
+      dispatch(fetchOrders({ token }));
+    }
+  }, [token, dispatch]);
+
+  useEffect(() => {
+    if (token) {
+      loadWarehouseAi();
+    }
+  }, [token, loadWarehouseAi]);
+
   const columns = [
     "sku",
     "product",
@@ -56,17 +94,12 @@ const WarehousePage = () => {
     "stato",
   ];
 
-  const [drawerAddOpen, setDrawerAddOpen] = useState(false);
-
-  // Add product handler
   const handleAddProduct = (newProduct) => {
     dispatch(addItem(newProduct));
   };
 
-  // Filter items by user workplace
   const filteredItems = useMemo(() => {
     if (!items || items.length === 0) return [];
-
     if (!userWorkplaceId) return items;
 
     return items.filter((item) => {
@@ -110,7 +143,6 @@ const WarehousePage = () => {
     <div className="warehouse-page">
       <div className="warehouse-container">
 
-        {/* Summary boxes */}
         <div className="warehouse-summary">
           {summaryButtons.map((btn, index) => {
             const Icon = btn.icon;
@@ -154,14 +186,29 @@ const WarehousePage = () => {
           })}
         </div>
 
-        {/* Warehouse table */}
+        <AiInsightPanel
+          title={t("aiWarehouseTitle")}
+          loading={aiLoading}
+          error={aiError}
+          source={aiSuggestions?.source}
+          onRefresh={loadWarehouseAi}
+          hasData={localizedSuggestions.length > 0}
+          className={`w-full mb-4 ${textColor}`}
+        >
+          <AiAlertList
+            items={localizedSuggestions}
+            sortBySeverity
+            compact
+            initialLimit={3}
+          />
+        </AiInsightPanel>
+
         <WarehouseTable
           data={filteredItems}
           allItems={items}
           columns={columns}
         />
 
-        {/* Add product drawer */}
         <DrawerAddNewProduct
           open={drawerAddOpen}
           onClose={() => setDrawerAddOpen(false)}

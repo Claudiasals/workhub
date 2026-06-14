@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
@@ -26,6 +26,12 @@ const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  useEffect(() => {
+    usernameRef.current?.focus();
+  }, []);
 
   // Theme-based assets and styles
   const isDark = theme === "dark";
@@ -130,12 +136,19 @@ const LoginPage = () => {
             </label>
 
             <input
+              ref={usernameRef}
               id="username"
               type="text"
               autoComplete="username"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  passwordRef.current?.focus();
+                }
+              }}
               className="custom-input w-full"
             />
           </div>
@@ -150,6 +163,7 @@ const LoginPage = () => {
             </label>
 
             <input
+              ref={passwordRef}
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"

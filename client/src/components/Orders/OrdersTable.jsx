@@ -64,7 +64,7 @@ const OrdersTable = ({
   ];
 
   return (
-    <div className="table-container">
+    <div className="table-container min-w-0 max-w-full">
       <div className="table-toolbar">
         <div className="table-toolbar-left">
           <h2 className="text-lg font-bold">
@@ -85,7 +85,7 @@ const OrdersTable = ({
             placeholder="Cerca..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="table-search"
+            className="table-search !w-auto min-w-0 max-w-[15rem]"
           />
         </div>
 
@@ -210,7 +210,13 @@ const OrdersTable = ({
                         {actions.map((action) => (
                           <button
                             key={action.name}
-                            className="table-action-btn"
+                            className={`table-action-btn${
+                              action.name === "edit" ? " table-action-btn--edit" : ""
+                            }${
+                              action.name === "delete"
+                                ? " table-action-btn--delete"
+                                : ""
+                            }`}
                             onClick={(e) => {
                               e.stopPropagation();
                               action.onClick(row);

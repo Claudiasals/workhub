@@ -15,6 +15,7 @@ import {
 import { fetchProducts } from "../store/feature/productsSlice";
 import { fetchPointsOfSalesAsync } from "../store/feature/pointOfSalesSlice";
 import { fetchCustomersAsync } from "../store/feature/customerSlice";
+import { CustomerCheckoutAiPanel } from "../components/customers/CustomerAiInsightsCard";
 
 const OrderPage = () => {
   const { t } = useLanguage();
@@ -40,6 +41,7 @@ const OrderPage = () => {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedPointOfSaleId, setSelectedPointOfSaleId] = useState("");
   const [totalQuantity, setTotalQuantity] = useState(0);
+  const [checkoutAiDismissed, setCheckoutAiDismissed] = useState(false);
 
   // Redux state
   const token = useSelector((state) => state.auth.token);
@@ -83,6 +85,20 @@ const OrderPage = () => {
     const ids = clientRows.map((r) => r.customerId).filter(Boolean);
     return new Set(ids).size !== ids.length;
   }, [clientRows]);
+
+  const selectedCheckoutCustomerId = useMemo(() => {
+    const ids = [...new Set(clientRows.map((r) => r.customerId).filter(Boolean))];
+    return ids.length === 1 ? ids[0] : null;
+  }, [clientRows]);
+
+  const selectedCheckoutCustomer = useMemo(
+    () => customers?.find((c) => c._id === selectedCheckoutCustomerId) || null,
+    [customers, selectedCheckoutCustomerId]
+  );
+
+  useEffect(() => {
+    setCheckoutAiDismissed(false);
+  }, [selectedCheckoutCustomerId]);
 
   // Quantity overflow validation
   const isQtyExceeded = totalClientQty > totalQuantity;
@@ -267,6 +283,23 @@ const OrderPage = () => {
               </div>
             ))}
 
+            {selectedCheckoutCustomerId &&
+              !checkoutAiDismissed &&
+              selectedCheckoutCustomer && (
+                <div className="mt-2">
+                  <p className="text-xs font-bold mb-2 opacity-80">
+                    {t("customerAiCheckoutTitle")}
+                  </p>
+                  <CustomerCheckoutAiPanel
+                    customer={selectedCheckoutCustomer}
+                    customerId={selectedCheckoutCustomerId}
+                    token={token}
+                    catalogProducts={products || []}
+                    onDismiss={() => setCheckoutAiDismissed(true)}
+                  />
+                </div>
+              )}
+
             <div className="space-y-1">
               {hasDuplicateClients && (
                 <p className="text-sm text-red-600 font-semibold">
@@ -365,7 +398,7 @@ const OrderPage = () => {
             name: "delete",
             icon: (
               <TrashIcon
-                size={16}
+                size={20}
                 color={theme === "dark" ? "#ff4d4d" : "#ff0000"}
                 weight="duotone"
               />

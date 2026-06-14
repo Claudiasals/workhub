@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -30,6 +30,11 @@ const TwoFA = () => {
 
   // 2FA code input state
   const [code, setCode] = useState("");
+  const codeRef = useRef(null);
+
+  useEffect(() => {
+    codeRef.current?.focus();
+  }, []);
 
   // Theme-based UI values
   const isDark = theme === "dark";
@@ -121,8 +126,10 @@ const TwoFA = () => {
             </label>
 
             <input
+              ref={codeRef}
               id="token2fa"
               type="text"
+              inputMode="numeric"
               autoComplete="one-time-code"
               className="custom-input w-full"
               value={code}

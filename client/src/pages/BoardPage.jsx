@@ -1,434 +1,231 @@
-import { createElement, useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { ChartLineUpIcon } from "@phosphor-icons/react";
 
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
-import CalendarBox from "../components/CalendarBox";
-import Table from "../components/Table";
-import Drawer from "../components/Drawer";
-import AppFeedbackModal from "../components/AppFeedbackModal";
-
-import {
-  WarehouseIcon,
-  ShoppingCartSimpleIcon,
-  UserCircleCheckIcon,
-  PackageIcon,
-  WarningOctagonIcon,
-  CalendarIcon,
-  MegaphoneIcon,
-  PencilSimpleIcon,
-  SirenIcon,
-  TrashIcon,
-} from "@phosphor-icons/react";
-
-import {
-  fetchEventsAsync,
-  createEventAsync,
-  updateEventAsync,
-  deleteEventAsync,
-} from "../store/feature/eventsSlice";
 import { fetchProducts } from "../store/feature/productsSlice";
-import { fetchItems } from "../store/feature/itemsSlice";
 import { fetchOrders } from "../store/feature/orderSlice";
+import { fetchTickets } from "../store/feature/ticketSlice";
+import { fetchItems } from "../store/feature/itemsSlice";
+import { fetchCustomersAsync } from "../store/feature/customerSlice";
+import { fetchUsersAsync } from "../store/feature/userSlice";
+import { fetchAllShiftsAsync, fetchUserShiftsAsync } from "../store/feature/shiftsSlice";
+import { fetchEventsAsync } from "../store/feature/eventsSlice";
+import { fetchBusinessOverviewRequest } from "../api/aiApi";
+import { analyzeBusinessOverviewLocal } from "../utils/businessOverviewAnalyzer";
+
+import DashboardKpiRow from "../components/dashboard/DashboardKpiRow";
+import BusinessOverviewPanel from "../components/dashboard/BusinessOverviewPanel";
+import SalesTrendChart from "../components/dashboard/SalesTrendChart";
+import CompanyEventsCalendar from "../components/dashboard/CompanyEventsCalendar";
+import ShiftsOverviewPanel from "../components/dashboard/ShiftsOverviewPanel";
+import CompanyDocumentsSection from "../components/dashboard/CompanyDocumentsSection";
+
+const MS_DAY = 86400000;
+const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+const getItemStock = (item) =>
+  Number(item.stock?.["Mia Sede"] ?? item.stock ?? 0);
 
 const BoardPage = () => {
+  const dispatch = useDispatch();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  // Auth data
   const token = useSelector((state) => state.auth.token);
   const authUser = useSelector((state) => state.auth.user);
+  const customers = useSelector((state) => state.customers.list);
   const role = authUser?.role;
   const userWorkplaceId =
     typeof authUser?.workplace === "string"
       ? authUser.workplace
       : authUser?.workplace?._id || authUser?.workplace?.id;
-  const canManageBoard = role === "admin";
+  const isAdmin = role === "admin";
 
-  // Global redux data
-  const users = useSelector((state) => state.users);
-  const pointOfSales = useSelector((state) => state.pos);
-  const products = useSelector((state) => state.products);
   const orders = useSelector((state) => state.orders);
-  const items = useSelector((state) => state.items);
-  const events = useSelector((state) => state.events.events);
+  const ordersLoading = useSelector((state) => state.orders.loading);
+  const itemsStatus = useSelector((state) => state.items.status);
+  const tickets = useSelector((state) => state.tickets.tickets) || [];
+  const warehouseItems = useSelector((state) => state.items.list) || [];
+  const shifts = useSelector((state) => state.shifts.list) || [];
+  const userShifts = useSelector((state) => state.shifts.current);
+  const users = useSelector((state) => state.users.list) || [];
 
-  // Products below stock threshold, scoped to the logged user's workplace
-  const lowStockProducts = useMemo(() => {
-    const itemList = items?.list || [];
+  const dataSnapshotRef = useRef({ items: [], orders: [], tickets: [], shifts: [] });
 
-    return itemList.filter((item) => {
-      const itemWorkplaceId =
+  const scopedOrders = useMemo(() => {
+    const list = orders?.items ?? [];
+    if (!userWorkplaceId || isAdmin) return list;
+    return list.filter((order) => {
+      const posId =
+        typeof order.pointOfSales === "string"
+          ? order.pointOfSales
+          : order.pointOfSales?._id || order.pointOfSales?.id;
+      return String(posId) === String(userWorkplaceId);
+    });
+  }, [orders?.items, userWorkplaceId, isAdmin]);
+
+  const scopedItems = useMemo(() => {
+    if (!userWorkplaceId || isAdmin) return warehouseItems;
+    return warehouseItems.filter((item) => {
+      const itemPos =
         typeof item.pointOfSales === "string"
           ? item.pointOfSales
           : item.pointOfSales?._id || item.pointOfSales?.id;
-
-      const matchesWorkplace =
-        !userWorkplaceId ||
-        String(itemWorkplaceId) === String(userWorkplaceId);
-
-      return matchesWorkplace && item.stock <= item.stockLimit;
+      return String(itemPos) === String(userWorkplaceId);
     });
-  }, [items?.list, userWorkplaceId]);
+  }, [warehouseItems, userWorkplaceId, isAdmin]);
+
+  const [overviewData, setOverviewData] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewError, setOverviewError] = useState("");
+  const [overviewOffline, setOverviewOffline] = useState(false);
+  const overviewAutoLoadedRef = useRef(false);
+
+  dataSnapshotRef.current = {
+    items: scopedItems,
+    orders: scopedOrders,
+    tickets,
+    shifts,
+  };
+
+  const coreDataReady =
+    !isAdmin ||
+    (!ordersLoading && itemsStatus !== "loading" && itemsStatus !== "idle");
 
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
-  // Initial data fetch on mount
   useEffect(() => {
     if (!token) return;
 
-    dispatch(fetchEventsAsync({ token }));
     dispatch(fetchProducts(token));
-    dispatch(fetchItems());
     dispatch(fetchOrders({ token }));
-  }, [dispatch, token]);
+    dispatch(fetchCustomersAsync(token));
+    dispatch(fetchEventsAsync({ token }));
 
-  // Board posts mapped for table component
-  const boardPosts = events.map((event) => ({
-    _id: event._id,
-    title: event.title,
-    date: event.startDate ? event.startDate.slice(0, 10) : "",
-    description: event.description || "",
-  }));
+    if (isAdmin) {
+      dispatch(fetchItems());
+      dispatch(fetchTickets());
+      dispatch(fetchUsersAsync(token));
+      dispatch(fetchAllShiftsAsync({ token }));
+    } else if (authUser?._id) {
+      dispatch(fetchUserShiftsAsync({ userId: authUser._id, token }));
+    }
+  }, [dispatch, token, isAdmin, authUser?._id]);
 
-  const boardColumns = ["title", "date", "description"];
+  const loadBusinessOverview = useCallback(async () => {
+    if (!token || !isAdmin) return;
+    setOverviewLoading(true);
+    setOverviewError("");
+    try {
+      const data = await fetchBusinessOverviewRequest(token);
+      setOverviewData(data);
+      setOverviewOffline(false);
+    } catch {
+      setOverviewData(analyzeBusinessOverviewLocal(dataSnapshotRef.current));
+      setOverviewOffline(true);
+      setOverviewError("");
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, [token, isAdmin]);
 
-  const columnLabels = {
-    title: t("titolo"),
-    date: t("data"),
-    description: t("descrizione"),
-  };
+  useEffect(() => {
+    overviewAutoLoadedRef.current = false;
+  }, [token]);
 
-  // Drawer state
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
-  const [eventToDelete, setEventToDelete] = useState(null);
-  const [boardSearchTerm, setBoardSearchTerm] = useState("");
+  useEffect(() => {
+    if (isAdmin && token && coreDataReady && !overviewAutoLoadedRef.current) {
+      overviewAutoLoadedRef.current = true;
+      loadBusinessOverview();
+    }
+  }, [isAdmin, token, coreDataReady, loadBusinessOverview]);
 
-  // Open drawer in edit mode
-  const openDrawerEdit = (row) => {
-    setEditData({
-      _id: row._id,
-      title: row.title,
-      date: row.date,
-      description: row.description || "",
-    });
-    setDrawerOpen(true);
-  };
+  const kpiMetrics = useMemo(() => {
+    const now = Date.now();
+    const last30 = scopedOrders.filter(
+      (o) => now - new Date(o.createdAt).getTime() <= 30 * MS_DAY
+    );
+    const revenue = last30.reduce((sum, o) => {
+      const price = Number(o.product?.price) || 0;
+      const qty = Number(o.totalQuantity) || Number(o.quantity) || 1;
+      return sum + price * qty;
+    }, 0);
 
-  // Open drawer in create mode
-  const openDrawerAdd = () => {
-    setEditData({ _id: null, title: "", date: "", description: "" });
-    setDrawerOpen(true);
-  };
+    const openTickets = isAdmin
+      ? tickets.filter((ticket) => ticket.status === "open").length
+      : 0;
 
-  // Create or update board event
-  const handleSavePost = (e) => {
-    e.preventDefault();
+    const criticalStock = isAdmin
+      ? scopedItems.filter(
+          (item) => getItemStock(item) <= Number(item.stockLimit ?? 0)
+        ).length
+      : 0;
 
-    const payload = {
-      title: editData.title,
-      startDate: editData.date,
-      endDate: editData.date,
-      description: editData.description,
-    };
+    const todayKey = DAY_KEYS[new Date().getDay()];
+    let staffOnShift = 0;
 
-    if (editData._id) {
-      dispatch(updateEventAsync({ id: editData._id, data: payload, token }));
-    } else {
-      dispatch(createEventAsync({ data: payload, token }));
+    if (isAdmin) {
+      shifts.forEach((doc) => {
+        const slots = doc.shifts?.[todayKey];
+        if (slots?.morning) staffOnShift += 1;
+        if (slots?.afternoon) staffOnShift += 1;
+      });
+    } else if (userShifts?.shifts?.[todayKey]) {
+      const slots = userShifts.shifts[todayKey];
+      staffOnShift = (slots.morning ? 1 : 0) + (slots.afternoon ? 1 : 0);
     }
 
-    setDrawerOpen(false);
-    setEditData(null);
-  };
-
-  // Delete board event
-  const handleDelete = (row) => {
-    setEventToDelete(row);
-  };
-
-  const confirmDeleteEvent = () => {
-    if (!eventToDelete) return;
-    dispatch(deleteEventAsync({ id: eventToDelete._id, token }));
-    setEventToDelete(null);
-  };
+    return {
+      revenue,
+      ordersCount: scopedOrders.length,
+      openTickets,
+      criticalStock,
+      staffOnShift,
+    };
+  }, [scopedOrders, tickets, scopedItems, shifts, userShifts, isAdmin]);
 
   return (
     <div
       data-page-scroll
-      className="w-full h-full flex flex-col gap-6 overflow-y-auto
+      className="dashboard-page-section w-full h-full overflow-y-auto
       [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
     >
-      {/* Top statistics */}
-      <div className="grid grid-cols-5 gap-4 w-full">
-        {[
-          {
-            icon: WarehouseIcon,
-            label: t("depositi"),
-            value: pointOfSales?.list?.length ?? 0,
-          },
-          {
-            icon: ShoppingCartSimpleIcon,
-            label: t("prodotti"),
-            value: products?.list?.length ?? 0,
-          },
-          {
-            icon: PackageIcon,
-            label: t("ordiniInUscita"),
-            value: orders?.items?.length ?? 0,
-          },
-          {
-            icon: WarningOctagonIcon,
-            label: t("articoliSottoSoglia"),
-            value: lowStockProducts.length,
-          },
-          {
-            icon: UserCircleCheckIcon,
-            label: t("personaleAttivo"),
-            value: users?.list?.length ?? 0,
-          },
-        ].map(({ icon: Icon, label, value }) => (
-          <div
-            key={label}
-            className={`app-surface page-info-box flex items-center justify-between ${textColor}`}
-          >
-            <div className="flex items-center gap-2">
-              {createElement(Icon, {
-                size: 24,
-                color: theme === "dark" ? "white" : "#090c64",
-                weight: "duotone",
-              })}
-              <span className="font-bold text-[14px]">{label}</span>
-            </div>
-            <span className="text-sm opacity-70 font-semibold">{value}</span>
-          </div>
-        ))}
-      </div>
+      <DashboardKpiRow {...kpiMetrics} isAdmin={isAdmin} />
 
-      {/* Board and low stock sections */}
-      <div className="grid grid-cols-2 gap-6 w-full">
-        {/* Board */}
-        <div
-          className={`app-surface flex flex-col gap-3 p-4 ${textColor}`}
-        >
-          <div className="dashboard-card-header flex items-center gap-4">
-            <MegaphoneIcon
-              size={24}
-              color={theme === "dark" ? "white" : "#090c64"}
-              weight="duotone"
-              className="preserve-icon-size shrink-0"
-            />
-            <h3 className="text-[14px] font-bold">{t("bacheca")}</h3>
+      {isAdmin && (
+        <BusinessOverviewPanel
+          data={overviewData}
+          loading={overviewLoading}
+          error={overviewError}
+          source={overviewOffline ? "heuristic" : overviewData?.source}
+          offlineHint={overviewOffline}
+          onRefresh={loadBusinessOverview}
+        />
+      )}
 
-            <div className="ml-auto flex items-center gap-2">
-              <input
-                type="text"
-                placeholder={t("cerca")}
-                value={boardSearchTerm}
-                onChange={(e) => setBoardSearchTerm(e.target.value)}
-                className="table-search dashboard-card-search"
-              />
-
-              {canManageBoard && (
-                <button
-                  onClick={openDrawerAdd}
-                  className="custom-button text-[14px]"
-                >
-                  + {t("aggiungi")}
-                </button>
-              )}
-            </div>
-          </div>
-          <Table
-            variant="embedded"
-            data={boardPosts}
-            columns={boardColumns}
-            columnLabels={columnLabels}
-            showSort={false}
-            showSearch={false}
-            searchTerm={boardSearchTerm}
-            actionLabel={canManageBoard ? t("azioni") : null}
-            actions={
-              canManageBoard
-                ? [
-                    {
-                      name: "edit",
-                      icon: (
-                        <PencilSimpleIcon
-                          size={24}
-                          color={theme === "dark" ? "white" : "#090c64"}
-                          weight="duotone"
-                          className="mr-4 preserve-icon-size"
-                        />
-                      ),
-                      onClick: openDrawerEdit,
-                    },
-                    {
-                      name: "delete",
-                      icon: (
-                        <TrashIcon
-                          size={16}
-                          color="#ff0000"
-                          weight="duotone"
-                        />
-                      ),
-                      onClick: handleDelete,
-                    },
-                  ]
-                : null
-            }
-          />
-        </div>
-
-        {/* Low stock products */}
-        <div
-          className={`app-surface flex flex-col gap-3 p-4 ${textColor}`}
-        >
-          <div className="dashboard-card-header flex items-center gap-4">
-            <SirenIcon
-              size={24}
-              color={theme === "dark" ? "white" : "#090c64"}
-              weight="duotone"
-              className="preserve-icon-size shrink-0"
-            />
-            <h3 className="text-[14px] font-bold">
-              {t("prodottiInEsaurimento")}
-            </h3>
-
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => navigate("/warehouse")}
-                className="custom-button text-[14px]"
-              >
-                {t("vediTutti")}
-              </button>
-            </div>
-          </div>
-
-          <Table
-            variant="embedded"
-            data={lowStockProducts.slice(0, 3).map((item) => ({
-              name: item.product.name,
-              stock: item.stock,
-              pos: item.pointOfSales.name,
-            }))}
-            columns={["name", "stock", "pos"]}
-            showSort={false}
-            showSearch={false}
-            columnLabels={{
-              name: t("prodotto"),
-              stock: t("giacenza"),
-              pos: t("pos"),
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Calendar section */}
-      <div
-        className="app-surface dashboard-calendar-card p-6 flex flex-col gap-4 min-h-[700px]"
-      >
-        <div className="flex items-center gap-4">
-          <CalendarIcon
+      <section className={`app-surface flex flex-col gap-3 p-4 min-w-0 w-full ${textColor}`}>
+        <div className="dashboard-card-header flex items-center gap-3">
+          <ChartLineUpIcon
             size={24}
             color={theme === "dark" ? "white" : "#090c64"}
             weight="duotone"
-            className="preserve-icon-size shrink-0"
           />
-          <h3 className={`text-[14px] font-bold ${textColor}`}>
-            {t("calendario")}
-          </h3>
+          <h3 className="text-sm font-bold">{t("andamentoVendite")}</h3>
         </div>
+        <SalesTrendChart
+          orders={scopedOrders}
+          customers={customers ?? []}
+          theme={theme}
+        />
+      </section>
 
-        <CalendarBox />
+      <div className="dashboard-dual-grid">
+        <CompanyEventsCalendar canManage={isAdmin} />
+        <ShiftsOverviewPanel canManage={isAdmin} />
       </div>
 
-      {/* Drawer for board events */}
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title={
-          editData && editData._id
-            ? t("modificaEvento")
-            : t("aggiungiEvento")
-        }
-      >
-        {editData && (
-          <form onSubmit={handleSavePost} className="flex flex-col gap-4">
-            <input
-              className="custom-input"
-              placeholder={t("titolo")}
-              value={editData.title}
-              onChange={(e) =>
-                setEditData({ ...editData, title: e.target.value })
-              }
-            />
-
-            <input
-              type="date"
-              className="custom-input"
-              value={editData.date}
-              onChange={(e) =>
-                setEditData({ ...editData, date: e.target.value })
-              }
-            />
-
-            <input
-              className="custom-input"
-              placeholder={t("descrizione")}
-              value={editData.description}
-              onChange={(e) =>
-                setEditData({
-                  ...editData,
-                  description: e.target.value,
-                })
-              }
-            />
-
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                className="custom-button-light"
-              >
-                {t("annulla")}
-              </button>
-              <button type="submit" className="custom-button">
-                {t("salva")}
-              </button>
-            </div>
-          </form>
-        )}
-      </Drawer>
-
-      <AppFeedbackModal
-        open={Boolean(eventToDelete)}
-        title={t("modaleAttenzione")}
-        message={
-          eventToDelete
-            ? `${t("seiSicuroEliminareEvento")} "${eventToDelete.title}"?`
-            : ""
-        }
-        tone="warning"
-        onClose={() => setEventToDelete(null)}
-        actions={[
-          {
-            label: t("annulla"),
-            onClick: () => setEventToDelete(null),
-            className: "custom-button-light",
-          },
-          {
-            label: t("elimina"),
-            onClick: confirmDeleteEvent,
-            className:
-              "rounded-xl bg-red-600 px-4 py-2 font-bold text-white shadow-md transition hover:bg-red-700",
-          },
-        ]}
-      />
+      <CompanyDocumentsSection canManage={isAdmin} />
     </div>
   );
 };
