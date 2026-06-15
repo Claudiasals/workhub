@@ -33,35 +33,30 @@ export function DashboardKpiRow({
       icon: ChartLineUpIcon,
       label: t("dashboardKpiSales"),
       value: formatCurrency(revenue),
-      tone: "sales",
       show: true,
     },
     {
       icon: ShoppingCartSimpleIcon,
       label: t("dashboardKpiOrders"),
       value: ordersCount,
-      tone: "orders",
       show: true,
     },
     {
       icon: TicketIcon,
       label: t("dashboardKpiTickets"),
       value: openTickets,
-      tone: "tickets",
       show: isAdmin,
     },
     {
       icon: WarningOctagonIcon,
       label: t("dashboardKpiCriticalStock"),
       value: criticalStock,
-      tone: criticalStock > 0 ? "critical" : "neutral",
       show: isAdmin,
     },
     {
       icon: UsersThreeIcon,
       label: isAdmin ? t("dashboardKpiStaffOnShift") : t("dashboardKpiMyShift"),
       value: staffOnShift,
-      tone: "staff",
       show: true,
     },
   ];
@@ -70,18 +65,18 @@ export function DashboardKpiRow({
 
   return (
     <div className="dashboard-kpi-grid">
-      {kpis.map(({ icon: Icon, label, value, tone }) => (
+      {kpis.map(({ icon: Icon, label, value }) => (
         <div
           key={label}
-          className={`dashboard-kpi-card dashboard-kpi-card--${tone} app-surface ${textColor}`}
+          className={`warehouse-summary-btn disabled ${textColor}`}
         >
-          <div className="dashboard-kpi-card__icon">
-            <Icon size={22} color={iconColor} weight="duotone" />
-          </div>
-          <div className="dashboard-kpi-card__body">
-            <span className="dashboard-kpi-card__label">{label}</span>
-            <span className="dashboard-kpi-card__value">{value}</span>
-          </div>
+          <span className="warehouse-summary-label">
+            <Icon size={24} color={iconColor} weight="duotone" />
+            <span>{label}</span>
+          </span>
+          <span className="warehouse-summary-value">
+            <span>{value}</span>
+          </span>
         </div>
       ))}
     </div>

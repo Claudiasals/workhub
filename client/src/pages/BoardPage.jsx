@@ -11,15 +11,13 @@ import { fetchItems } from "../store/feature/itemsSlice";
 import { fetchCustomersAsync } from "../store/feature/customerSlice";
 import { fetchUsersAsync } from "../store/feature/userSlice";
 import { fetchAllShiftsAsync, fetchUserShiftsAsync } from "../store/feature/shiftsSlice";
-import { fetchEventsAsync } from "../store/feature/eventsSlice";
 import { fetchBusinessOverviewRequest } from "../api/aiApi";
 import { analyzeBusinessOverviewLocal } from "../utils/businessOverviewAnalyzer";
 
 import DashboardKpiRow from "../components/dashboard/DashboardKpiRow";
 import BusinessOverviewPanel from "../components/dashboard/BusinessOverviewPanel";
 import SalesTrendChart from "../components/dashboard/SalesTrendChart";
-import CompanyEventsCalendar from "../components/dashboard/CompanyEventsCalendar";
-import ShiftsOverviewPanel from "../components/dashboard/ShiftsOverviewPanel";
+import DashboardCalendar from "../components/dashboard/DashboardCalendar";
 import CompanyDocumentsSection from "../components/dashboard/CompanyDocumentsSection";
 
 const MS_DAY = 86400000;
@@ -101,7 +99,6 @@ const BoardPage = () => {
     dispatch(fetchProducts(token));
     dispatch(fetchOrders({ token }));
     dispatch(fetchCustomersAsync(token));
-    dispatch(fetchEventsAsync({ token }));
 
     if (isAdmin) {
       dispatch(fetchItems());
@@ -220,10 +217,7 @@ const BoardPage = () => {
         />
       </section>
 
-      <div className="dashboard-dual-grid">
-        <CompanyEventsCalendar canManage={isAdmin} />
-        <ShiftsOverviewPanel canManage={isAdmin} />
-      </div>
+      <DashboardCalendar canManage={isAdmin} />
 
       <CompanyDocumentsSection canManage={isAdmin} />
     </div>

@@ -1,3 +1,5 @@
+import { Chart } from "chart.js";
+
 export const getChartTheme = (theme = "light") => {
   const isDark = theme === "dark";
 
@@ -13,6 +15,30 @@ export const getChartTheme = (theme = "light") => {
       : "rgba(9,12,100,0.12)",
   };
 };
+
+const buildLegendLabels = (chart, textColor) =>
+  Chart.defaults.plugins.legend.labels.generateLabels(chart).map((item) => {
+    const dataset = chart.data.datasets[item.datasetIndex];
+    if (!dataset) return item;
+
+    const color =
+      (typeof dataset.pointBackgroundColor === "string" &&
+        dataset.pointBackgroundColor) ||
+      (typeof dataset.borderColor === "string" && dataset.borderColor) ||
+      (typeof dataset.backgroundColor === "string" &&
+      dataset.backgroundColor !== "transparent"
+        ? dataset.backgroundColor
+        : undefined);
+
+    if (color) {
+      item.fillStyle = color;
+      item.strokeStyle = color;
+      item.lineWidth = 0;
+    }
+
+    item.fontColor = textColor;
+    return item;
+  });
 
 export const buildBaseChartOptions = ({
   theme = "light",
@@ -82,8 +108,12 @@ export const buildBaseChartOptions = ({
         labels: {
           color: textColor,
           font: { family: "Nunito", weight: "700", size: 12 },
-          boxWidth: 14,
-          boxHeight: 14,
+          usePointStyle: true,
+          pointStyle: "circle",
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 16,
+          generateLabels: (chart) => buildLegendLabels(chart, textColor),
         },
       },
       tooltip: {

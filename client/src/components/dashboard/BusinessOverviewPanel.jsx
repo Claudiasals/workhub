@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   WarningCircleIcon,
   WarningIcon,
@@ -19,12 +20,22 @@ const alertIconMap = {
   success: CheckCircleIcon,
 };
 
-const alertClassMap = {
-  critical: "business-overview-item--critical",
-  warning: "business-overview-item--warning",
-  info: "business-overview-item--info",
-  success: "business-overview-item--success",
+const urgencyClassMap = {
+  critical: "business-overview-item--urgency-alta",
+  warning: "business-overview-item--urgency-media",
+  info: "business-overview-item--urgency-bassa",
+  success: "business-overview-item--urgency-normale",
 };
+
+function getUrgencyClass(item, variant) {
+  if (item.type && urgencyClassMap[item.type]) {
+    return urgencyClassMap[item.type];
+  }
+
+  return variant === "insight"
+    ? urgencyClassMap.success
+    : urgencyClassMap.info;
+}
 
 const areaClassMap = {
   magazzino: "business-overview-area--warehouse",
@@ -34,7 +45,37 @@ const areaClassMap = {
   turni: "business-overview-area--shifts",
 };
 
+const AREA_ROUTES = {
+  magazzino: "/warehouse",
+  ticket: "/ticket",
+  vendite: "/orders",
+  clienti: "/customers",
+  turni: "/personale",
+};
+
+function getAreaActionLabel(item, t) {
+  if (!item.area) return item.actionLabel || null;
+
+  const key = `businessOverviewAction_${item.area}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+
+  return item.actionLabel || null;
+}
+
+function getAreaActionRoute(item) {
+  return item.targetRoute || AREA_ROUTES[item.area] || null;
+}
+
+const OVERVIEW_INITIAL_LIMIT = 2;
+
 function OverviewList({ items, variant, t }) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [items?.length, variant]);
+
   if (!items?.length) {
     return (
       <p className="business-overview-empty">
@@ -45,54 +86,79 @@ function OverviewList({ items, variant, t }) {
     );
   }
 
-  return (
-    <ul className="business-overview-list">
-      {items.map((item, index) => {
-        const Icon =
-          variant === "alert"
-            ? alertIconMap[item.type] || InfoIcon
-            : LightbulbIcon;
+  const hasHidden = items.length > OVERVIEW_INITIAL_LIMIT;
+  const visibleItems = expanded
+    ? items
+    : items.slice(0, OVERVIEW_INITIAL_LIMIT);
 
-        return (
-          <li
-            key={`${item.title}-${index}`}
-            className={`business-overview-item ${
-              variant === "alert"
-                ? alertClassMap[item.type] || alertClassMap.info
-                : "business-overview-item--insight"
-            }`}
-          >
-            <span className="business-overview-item__icon" aria-hidden="true">
-              <Icon size={20} weight="duotone" />
-            </span>
-            <div className="business-overview-item__body">
-              <div className="business-overview-item__meta">
-                {item.area && (
-                  <span
-                    className={`business-overview-area ${
-                      areaClassMap[item.area] || ""
-                    }`}
-                  >
-                    {t(`businessOverviewArea_${item.area}`) || item.area}
-                  </span>
-                )}
+  return (
+    <div className="business-overview-list-wrap">
+      <ul
+        className={`business-overview-list${
+          expanded ? " business-overview-list--expanded" : ""
+        }`}
+      >
+        {visibleItems.map((item, index) => {
+          const Icon =
+            variant === "alert"
+              ? alertIconMap[item.type] || InfoIcon
+              : LightbulbIcon;
+
+          return (
+            <li
+              key={`${item.title}-${index}`}
+              className={`business-overview-item ${getUrgencyClass(item, variant)}`}
+            >
+              <span className="business-overview-item__icon" aria-hidden="true">
+                <Icon size={16} weight="duotone" />
+              </span>
+              <div className="business-overview-item__body">
+                {item.area ? (
+                  <div className="business-overview-item__meta">
+                    <span
+                      className={`business-overview-area ${
+                        areaClassMap[item.area] || ""
+                      }`}
+                    >
+                      {t(`businessOverviewArea_${item.area}`) || item.area}
+                    </span>
+                    {getAreaActionRoute(item) && getAreaActionLabel(item, t) ? (
+                      <Link
+                        to={getAreaActionRoute(item)}
+                        className="business-overview-action"
+                      >
+                        {getAreaActionLabel(item, t)}
+                        <ArrowRightIcon size={12} weight="bold" />
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : null}
+                <p className="business-overview-item__title">{item.title}</p>
+                {item.description ? (
+                  <p className="business-overview-item__desc">{item.description}</p>
+                ) : null}
               </div>
-              <p className="business-overview-item__title">{item.title}</p>
-              <p className="business-overview-item__desc">{item.description}</p>
-              {item.actionLabel && item.targetRoute && (
-                <Link
-                  to={item.targetRoute}
-                  className="business-overview-action"
-                >
-                  {item.actionLabel}
-                  <ArrowRightIcon size={14} weight="bold" />
-                </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      {hasHidden ? (
+        <button
+          type="button"
+          className="ai-alert-toggle"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+        >
+          {expanded
+            ? t("aiShowLess")
+            : t("aiShowMore").replace(
+                "{count}",
+                String(items.length - OVERVIEW_INITIAL_LIMIT)
               )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+        </button>
+      ) : null}
+    </div>
   );
 }
 

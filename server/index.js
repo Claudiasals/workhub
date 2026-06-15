@@ -3,6 +3,7 @@ import helmet from "helmet";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connect as connectDb } from "./db/index.js";
+import { seedCalendarWeek } from "./api/v1/seed/seedCalendarWeek.js";
 import apiRouter from "./api/index.js";
 
 dotenv.config();
@@ -63,6 +64,17 @@ const PORT = process.env.SERVER_PORT || 3030;
 const startServer = async () => {
 	try {
 		await connectDb();
+
+		if (process.env.AUTO_CALENDAR_WEEK !== "false") {
+			try {
+				const result = await seedCalendarWeek();
+				console.log(
+					`Calendar week seeded (${result.events} events, ${result.shifts} shift schedules for ${result.users} users)`
+				);
+			} catch (seedErr) {
+				console.warn("Calendar week seed failed:", seedErr.message);
+			}
+		}
 
 		app.listen(PORT, () => {
 			console.log(`Server running on port ${PORT}`);

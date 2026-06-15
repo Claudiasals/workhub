@@ -26,6 +26,8 @@ const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
           backgroundColor: isDark
             ? "rgba(96,165,250,0.18)"
             : "rgba(59,130,246,0.14)",
+          pointBackgroundColor: isDark ? "#60a5fa" : "#3B82F6",
+          pointBorderColor: isDark ? "#60a5fa" : "#3B82F6",
           fill: true,
           tension: 0.35,
           pointRadius: 4,
@@ -37,6 +39,8 @@ const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
           data: trend.map((bucket) => bucket.orders),
           borderColor: isDark ? "#fbbf24" : "#F59E0B",
           backgroundColor: "transparent",
+          pointBackgroundColor: isDark ? "#fbbf24" : "#F59E0B",
+          pointBorderColor: isDark ? "#fbbf24" : "#F59E0B",
           tension: 0.35,
           pointRadius: 4,
           pointHoverRadius: 6,
@@ -45,8 +49,10 @@ const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
         {
           label: t("venditeNuoviClienti"),
           data: trend.map((bucket) => bucket.newClients),
-          borderColor: isDark ? "#4ade80" : "#22C55E",
+          borderColor: isDark ? "#a78bfa" : "#8b5cf6",
           backgroundColor: "transparent",
+          pointBackgroundColor: isDark ? "#a78bfa" : "#8b5cf6",
+          pointBorderColor: isDark ? "#a78bfa" : "#8b5cf6",
           tension: 0.35,
           pointRadius: 4,
           pointHoverRadius: 6,
