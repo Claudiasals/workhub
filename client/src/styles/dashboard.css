@@ -20,6 +20,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -393,7 +394,7 @@
 }
 
 .company-events-calendar__body {
-  min-height: 420px;
+  min-height: 580px;
 }
 
 .business-overview-offline-hint {

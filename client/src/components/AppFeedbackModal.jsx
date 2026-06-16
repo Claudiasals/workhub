@@ -75,7 +75,7 @@ const AppFeedbackModal = ({
         </h3>
 
         {message && (
-          <p className="mb-6 text-sm font-semibold opacity-80">
+          <p className="mb-6 whitespace-pre-line text-sm font-semibold opacity-80">
             {message}
           </p>
         )}

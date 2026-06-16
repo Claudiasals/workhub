@@ -10,6 +10,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../store/feature/authSlice";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
+import NotificationBell from "./NotificationBell";
 
 const SETTINGS_RETURN_PATH_KEY = "workhub-settings-return-path";
 
@@ -68,17 +69,7 @@ const TopBar = () => {
       </div>
 
       <div className="topbar-actions">
-        <button
-          onClick={handleThemeToggle}
-          title={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
-          aria-label={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
-        >
-          {theme === "dark" ? (
-            <SunIcon size={24} color="white" weight="duotone" />
-          ) : (
-            <MoonIcon size={24} color="#090c64" weight="duotone" />
-          )}
-        </button>
+        <NotificationBell />
 
         <button
           type="button"
@@ -91,6 +82,18 @@ const TopBar = () => {
             weight="duotone"
             color={theme === "dark" ? "white" : "#090c64"}
           />
+        </button>
+
+        <button
+          onClick={handleThemeToggle}
+          title={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
+          aria-label={theme === "dark" ? "Passa alla modalita light" : "Passa alla modalita dark"}
+        >
+          {theme === "dark" ? (
+            <SunIcon size={24} color="white" weight="duotone" />
+          ) : (
+            <MoonIcon size={24} color="#090c64" weight="duotone" />
+          )}
         </button>
 
         <button onClick={handleLogout} title="Logout">

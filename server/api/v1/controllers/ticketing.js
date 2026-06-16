@@ -1,5 +1,10 @@
 import TicketModel from "../../../db/models/Ticket.js";
 import { handleRouteErrors } from "../../../utils/error.js";
+import { classifyTicket } from "../services/ai/features.js";
+
+const hasValidClassification = (classification) =>
+  classification?.priority &&
+  ["bassa", "media", "alta"].includes(classification.priority);
 
 // Create a new ticket
 export const createTickets = async (req, res) => {
@@ -10,6 +15,13 @@ export const createTickets = async (req, res) => {
     if (!payload.name) {
       const base = payload.title ? String(payload.title).trim() : "ticket";
       payload.name = `${base}-${Date.now()}`;
+    }
+
+    if (!hasValidClassification(payload.aiClassification)) {
+      payload.aiClassification = await classifyTicket({
+        title: payload.name,
+        description: payload.content || "",
+      });
     }
 
     const newTicket = new TicketModel(payload); // Create ticket instance

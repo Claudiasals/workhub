@@ -121,7 +121,15 @@
 }
 
 .calendar-toolbar {
-  @apply px-4 py-3 my-3 rounded-xl border flex justify-between items-center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  margin-block: 0.75rem;
+  border-radius: 0.75rem;
+  border-width: 1px;
   background: rgba(250, 250, 250, 0.125);
   border-color: rgba(255, 255, 255, 0.3);
   -webkit-backdrop-filter: blur(8px);
@@ -129,6 +137,31 @@
   box-shadow:
     0 4px 6px -1px rgb(0 0 0 / 0.1),
     0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.calendar-toolbar__period {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.calendar-toolbar__views,
+.calendar-toolbar__nav,
+.calendar-toolbar__scope,
+.calendar-toolbar__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+}
+
+.calendar-toolbar__end {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.calendar-toolbar__nav {
+  margin-left: 0;
 }
 
 .dark .calendar-toolbar {
@@ -288,7 +321,7 @@
 
 .calendar-mode-toggle {
   display: inline-flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -366,23 +399,30 @@
 }
 
 .dashboard-calendar-header {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
 }
 
 .dashboard-calendar-header__title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   flex: 1 1 auto;
   min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .dashboard-calendar-header {
-    flex-wrap: wrap;
-  }
+.dashboard-calendar-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
 
+@media (max-width: 768px) {
   .dashboard-calendar-header__actions {
-    width: 100%;
-    margin-left: 0 !important;
-    justify-content: flex-end;
+    margin-left: 0;
   }
 }
 
@@ -392,6 +432,11 @@
   gap: 0.75rem 1.25rem;
   font-size: 0.75rem;
   opacity: 0.9;
+}
+
+.calendar-shift-legend--below {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
 }
 
 .calendar-shift-legend__item {
@@ -407,10 +452,22 @@
   flex-shrink: 0;
 }
 
-.calendar-shift-legend__dot--morning {
+.calendar-shift-legend__dot--early {
   background: #38bdf8;
 }
 
-.calendar-shift-legend__dot--afternoon {
+.calendar-shift-legend__dot--mid {
+  background: #facc15;
+}
+
+.calendar-shift-legend__dot--late {
+  background: #090c64;
+}
+
+.calendar-shift-legend__dot--meeting {
+  background: #38bdf8;
+}
+
+.calendar-shift-legend__dot--company-event {
   background: #facc15;
 }

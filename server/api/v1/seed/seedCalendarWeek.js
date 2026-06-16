@@ -22,6 +22,7 @@ function addDays(date, days) {
 const WEEK_EVENTS = [
   {
     title: "Briefing settimanale",
+    kind: "meeting",
     dayOffset: 0,
     startH: 9,
     startM: 0,
@@ -34,6 +35,7 @@ const WEEK_EVENTS = [
   },
   {
     title: "Riunione reparto vendite",
+    kind: "meeting",
     dayOffset: 1,
     startH: 10,
     startM: 0,
@@ -46,6 +48,7 @@ const WEEK_EVENTS = [
   },
   {
     title: "Formazione sicurezza",
+    kind: "event",
     dayOffset: 2,
     startH: 14,
     startM: 0,
@@ -58,6 +61,7 @@ const WEEK_EVENTS = [
   },
   {
     title: "Inventario rotativo",
+    kind: "event",
     dayOffset: 3,
     startH: 8,
     startM: 0,
@@ -70,6 +74,7 @@ const WEEK_EVENTS = [
   },
   {
     title: "Town hall aziendale",
+    kind: "event",
     dayOffset: 4,
     startH: 16,
     startM: 0,
@@ -84,41 +89,43 @@ const WEEK_EVENTS = [
 
 const SHIFT_PATTERNS = [
   {
-    monday: { morning: true, afternoon: false },
-    tuesday: { morning: true, afternoon: true },
-    wednesday: { morning: true, afternoon: false },
-    thursday: { morning: false, afternoon: true },
-    friday: { morning: true, afternoon: true },
-    saturday: { morning: false, afternoon: false },
+    monday: { early: true, mid: false, late: false },
+    tuesday: { early: false, mid: true, late: false },
+    wednesday: { early: false, mid: false, late: true },
+    thursday: { early: true, mid: false, late: false },
+    friday: { early: false, mid: true, late: false },
+    saturday: { early: false, mid: false, late: true },
   },
   {
-    monday: { morning: true, afternoon: true },
-    tuesday: { morning: false, afternoon: true },
-    wednesday: { morning: true, afternoon: true },
-    thursday: { morning: true, afternoon: false },
-    friday: { morning: false, afternoon: true },
-    saturday: { morning: true, afternoon: false },
+    monday: { early: false, mid: true, late: false },
+    tuesday: { early: false, mid: false, late: true },
+    wednesday: { early: true, mid: false, late: false },
+    thursday: { early: false, mid: true, late: false },
+    friday: { early: false, mid: false, late: true },
+    saturday: { early: true, mid: false, late: false },
   },
   {
-    monday: { morning: false, afternoon: true },
-    tuesday: { morning: true, afternoon: false },
-    wednesday: { morning: false, afternoon: true },
-    thursday: { morning: true, afternoon: true },
-    friday: { morning: true, afternoon: false },
-    saturday: { morning: false, afternoon: false },
+    monday: { early: false, mid: false, late: true },
+    tuesday: { early: true, mid: false, late: false },
+    wednesday: { early: false, mid: true, late: false },
+    thursday: { early: false, mid: false, late: true },
+    friday: { early: true, mid: false, late: false },
+    saturday: { early: false, mid: true, late: false },
   },
   {
-    monday: { morning: true, afternoon: false },
-    tuesday: { morning: true, afternoon: false },
-    wednesday: { morning: true, afternoon: true },
-    thursday: { morning: false, afternoon: true },
-    friday: { morning: true, afternoon: false },
-    saturday: { morning: true, afternoon: true },
+    monday: { early: true, mid: false, late: false },
+    tuesday: { early: false, mid: false, late: true },
+    wednesday: { early: false, mid: true, late: false },
+    thursday: { early: true, mid: false, late: false },
+    friday: { early: false, mid: false, late: true },
+    saturday: { early: false, mid: true, late: false },
   },
 ];
 
 function buildEventDescription(ev) {
+  const tipo = ev.kind === "meeting" ? "riunione" : "evento";
   const meta = [
+    `Tipo: ${tipo}`,
     `Sede: ${ev.location}`,
     `Reparto: ${ev.department}`,
     `Destinatari: ${ev.audience}`,

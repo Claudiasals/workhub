@@ -1,7 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-
-// Base API URL
-const API_URL = "http://localhost:3030/api/v1"; // base API url
+import { API_URL } from "../../config/api.js";
 const emptyAuth = {
 	user: null,
 	token: null,
@@ -80,7 +78,14 @@ export const loginAsync = createAsyncThunk(
 			}
 		} catch (error) {
 			console.error("Login error:", error);
-			return rejectWithValue("Network error.");
+			const isOffline =
+				error instanceof TypeError &&
+				/failed to fetch|networkerror|load failed/i.test(error.message || "");
+			return rejectWithValue(
+				isOffline
+					? "Server non raggiungibile. Avvia il backend con: cd server && npm run dev"
+					: "Network error."
+			);
 		}
 	}
 );

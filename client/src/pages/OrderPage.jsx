@@ -45,6 +45,8 @@ const OrderPage = () => {
 
   // Redux state
   const token = useSelector((state) => state.auth.token);
+  const role = useSelector((state) => state.auth.user?.role);
+  const isAdmin = role === "admin";
   const products = useSelector((state) => state.products.list);
   const pointOfSales = useSelector((state) => state.pos.list);
   const customers = useSelector((state) => state.customers.list);
@@ -186,11 +188,15 @@ const OrderPage = () => {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={t("nuovoOrdine")}
+        variant={isAdmin ? "default" : "liquid-glass"}
       >
           <form
             onSubmit={handleCreateOrder}
-            className="flex flex-col gap-4"
+            className={`flex flex-col gap-4${
+              isAdmin ? "" : " order-drawer-form"
+            }`}
           >
+            <div className={isAdmin ? undefined : "order-drawer-section flex flex-col gap-3"}>
             <select
               required
               className="drawer-input !mb-0"
@@ -230,6 +236,9 @@ const OrderPage = () => {
               }
             />
 
+            </div>
+
+            <div className={isAdmin ? undefined : "order-drawer-section flex flex-col gap-3"}>
             <div className="flex justify-between items-center mt-2">
               <span className="text-sm font-semibold">
                 {t("clientiQuantita")}
@@ -282,6 +291,8 @@ const OrderPage = () => {
                 />
               </div>
             ))}
+
+            </div>
 
             {selectedCheckoutCustomerId &&
               !checkoutAiDismissed &&

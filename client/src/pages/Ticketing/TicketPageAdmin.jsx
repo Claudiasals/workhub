@@ -363,7 +363,7 @@ const TicketPageAdmin = () => {
           <div className="ticket-admin-filters__controls">
             <button
               onClick={() => setCalendarOpen(true)}
-              className="custom-button ticket-admin-filters__date-btn shrink-0 whitespace-nowrap"
+              className="custom-button ticket-admin-filters__date-btn"
               type="button"
             >
               <CalendarDotsIcon size={20} weight="duotone" />
@@ -756,7 +756,7 @@ const TicketPageAdmin = () => {
                       </span>
                       <button
                         type="button"
-                        className="custom-button shrink-0 whitespace-nowrap text-xs px-3 py-1.5"
+                        className="custom-button text-xs px-3 py-1.5"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTicket(ticket);

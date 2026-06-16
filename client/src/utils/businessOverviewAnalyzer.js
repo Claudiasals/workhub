@@ -1,4 +1,6 @@
 /** Client-side Business Overview fallback (mirrors server heuristics). */
+import { getDaySlots, SHIFT_PERIOD_KEYS } from "./shiftPeriods";
+
 export function analyzeBusinessOverviewLocal({
   items = [],
   orders = [],
@@ -83,21 +85,22 @@ export function analyzeBusinessOverviewLocal({
   }
 
   if (shifts.length) {
-    const coverage = { morning: 0, afternoon: 0 };
+    const coverage = { early: 0, mid: 0, late: 0 };
     shifts.forEach((doc) => {
       const day = new Date().getDay();
       const keys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
       const dayKey = keys[day];
-      const slots = doc.shifts?.[dayKey];
-      if (slots?.morning) coverage.morning += 1;
-      if (slots?.afternoon) coverage.afternoon += 1;
+      const slots = getDaySlots(doc.shifts?.[dayKey]);
+      SHIFT_PERIOD_KEYS.forEach((period) => {
+        if (slots[period]) coverage[period] += 1;
+      });
     });
-    if (coverage.afternoon <= 1) {
+    if (coverage.mid <= 1 && coverage.late <= 1) {
       insights.push({
         type: "warning",
         area: "turni",
-        title: "Copertura pomeridiana ridotta",
-        description: "Pochi dipendenti assegnati nel pomeriggio odierno.",
+        title: "Copertura serale ridotta",
+        description: "Pochi dipendenti assegnati nelle fasce 12-18 e 17-22 odierne.",
         actionLabel: "Controlla turni",
         targetRoute: "/personale",
       });

@@ -12,6 +12,18 @@ export const fetchAllShiftsRequest = async ({ token }) => {
   return { res, data };
 };
 
+// Fetch shifts for the authenticated user's workplace (GET)
+export const fetchWorkplaceShiftsRequest = async ({ token }) => {
+  const res = await fetch(`${API_URL}/shifts/workplace`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+  return { res, data };
+};
+
 // Fetch shifts by user ID (GET)
 export const fetchUserShiftsRequest = async ({ userId, token }) => {
   const res = await fetch(`${API_URL}/shifts/${userId}`, {

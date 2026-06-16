@@ -328,13 +328,13 @@ export class BusinessOverviewService {
     const todayKey = dayKeys[dayIndex];
     if (todayKey === "friday") {
       const friCov = shiftAnalysis.coverage?.friday;
-      if (friCov && friCov.afternoon <= 1) {
+      if (friCov && friCov.mid <= 1 && friCov.late <= 1) {
         insights.push(
           item(
             "warning",
             "turni",
-            "Venerdì pomeriggio: copertura ridotta",
-            "Venerdì pomeriggio risultano pochi dipendenti assegnati rispetto alla media delle vendite.",
+            "Venerdì: copertura serale ridotta",
+            "Venerdì nelle fasce 12-18 e 17-22 risultano pochi dipendenti assegnati rispetto alla media delle vendite.",
             "Controlla turni"
           )
         );

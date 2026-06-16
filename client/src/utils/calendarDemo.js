@@ -1,15 +1,17 @@
 import { startOfWeek, endOfWeek } from "date-fns";
+import { getDateLocale, getDayKeyFromDate } from "./shiftsCalendar";
 import {
-  getDateLocale,
-  getDayKeyFromDate,
+  SHIFT_PERIOD_KEYS,
   SHIFT_SLOT_TIMES,
+  getDaySlots,
   WORKDAY_KEYS,
-} from "./shiftsCalendar";
+} from "./shiftPeriods";
 
 const DEMO_COMPANY_EVENTS = [
   {
     id: "demo-ev-1",
     title: "Briefing settimanale",
+    kind: "meeting",
     dayOffset: 0,
     startHour: 9,
     endHour: 9,
@@ -22,6 +24,7 @@ const DEMO_COMPANY_EVENTS = [
   {
     id: "demo-ev-2",
     title: "Riunione reparto vendite",
+    kind: "meeting",
     dayOffset: 1,
     startHour: 10,
     endHour: 11,
@@ -33,6 +36,7 @@ const DEMO_COMPANY_EVENTS = [
   {
     id: "demo-ev-3",
     title: "Formazione sicurezza",
+    kind: "event",
     dayOffset: 2,
     startHour: 14,
     endHour: 16,
@@ -44,6 +48,7 @@ const DEMO_COMPANY_EVENTS = [
   {
     id: "demo-ev-4",
     title: "Inventario rotativo",
+    kind: "event",
     dayOffset: 3,
     startHour: 8,
     endHour: 12,
@@ -55,6 +60,7 @@ const DEMO_COMPANY_EVENTS = [
   {
     id: "demo-ev-5",
     title: "Town hall aziendale",
+    kind: "event",
     dayOffset: 4,
     startHour: 16,
     endHour: 17,
@@ -71,11 +77,12 @@ const DEMO_SHIFT_ROSTER = [
     name: "Luna Bianchi",
     department: "Vendite",
     pattern: {
-      monday: { morning: true, afternoon: false },
-      tuesday: { morning: true, afternoon: true },
-      wednesday: { morning: true, afternoon: false },
-      thursday: { morning: false, afternoon: true },
-      friday: { morning: true, afternoon: true },
+      monday: { early: true, mid: false, late: false },
+      tuesday: { early: false, mid: true, late: false },
+      wednesday: { early: false, mid: false, late: true },
+      thursday: { early: true, mid: false, late: false },
+      friday: { early: false, mid: true, late: false },
+      saturday: { early: false, mid: false, late: true },
     },
   },
   {
@@ -83,11 +90,12 @@ const DEMO_SHIFT_ROSTER = [
     name: "Luigi Verdi",
     department: "Magazzino",
     pattern: {
-      monday: { morning: true, afternoon: true },
-      tuesday: { morning: false, afternoon: true },
-      wednesday: { morning: true, afternoon: false },
-      thursday: { morning: true, afternoon: false },
-      friday: { morning: false, afternoon: true },
+      monday: { early: false, mid: true, late: false },
+      tuesday: { early: false, mid: false, late: true },
+      wednesday: { early: true, mid: false, late: false },
+      thursday: { early: false, mid: true, late: false },
+      friday: { early: false, mid: false, late: true },
+      saturday: { early: true, mid: false, late: false },
     },
   },
   {
@@ -95,12 +103,12 @@ const DEMO_SHIFT_ROSTER = [
     name: "Mario Rossi",
     department: "Assistenza",
     pattern: {
-      monday: { morning: false, afternoon: true },
-      tuesday: { morning: true, afternoon: false },
-      wednesday: { morning: false, afternoon: true },
-      thursday: { morning: true, afternoon: true },
-      friday: { morning: true, afternoon: false },
-      saturday: { morning: true, afternoon: false },
+      monday: { early: false, mid: false, late: true },
+      tuesday: { early: true, mid: false, late: false },
+      wednesday: { early: false, mid: true, late: false },
+      thursday: { early: false, mid: false, late: true },
+      friday: { early: true, mid: false, late: false },
+      saturday: { early: false, mid: true, late: false },
     },
   },
 ];
@@ -135,6 +143,7 @@ export function buildDemoCompanyEvents(referenceDate, lang) {
       ...ev,
       start,
       end,
+      eventKind: ev.kind,
       isDb: false,
       isDemo: true,
       isShift: false,
@@ -161,10 +170,10 @@ export function buildDemoShiftEvents(lang) {
     }
 
     DEMO_SHIFT_ROSTER.forEach((person) => {
-      const slots = person.pattern[dayKey];
+      const slots = getDaySlots(person.pattern[dayKey]);
       if (!slots) return;
 
-      ["morning", "afternoon"].forEach((period) => {
+      SHIFT_PERIOD_KEYS.forEach((period) => {
         if (!slots[period]) return;
         const times = SHIFT_SLOT_TIMES[period];
         const start = new Date(cursor);

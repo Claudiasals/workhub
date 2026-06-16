@@ -7,6 +7,7 @@ import { useLanguage } from "../../context/LanguageContext";
 import bgLight from "../../assets/bg/bg.jpg";
 import bgDark from "../../assets/bg/bgScuro.jpg";
 import AppFeedbackModal from "../AppFeedbackModal";
+import { getWorkplaceId } from "../../utils/shiftsCalendar";
 
 const DrawerAddNewProduct = ({ open, onClose }) => {
   const dispatch = useDispatch();
@@ -15,9 +16,8 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
   const items = useSelector((state) => state.items.list);
 
   // Logged user's workplace ID
-  const userWorkplaceId = useSelector(
-    (state) => state.auth.user?.workplace?._id
-  );
+  const authUser = useSelector((state) => state.auth.user);
+  const userWorkplaceId = getWorkplaceId(authUser);
 
   // Local UI state
   const [search, setSearch] = useState("");
@@ -58,7 +58,11 @@ const DrawerAddNewProduct = ({ open, onClose }) => {
       if (!item?.product) return false;
 
       const sameWorkplace =
-        String(item.pointOfSales?._id) === String(userWorkplaceId);
+        String(
+          typeof item.pointOfSales === "string"
+            ? item.pointOfSales
+            : item.pointOfSales?._id || item.pointOfSales?.id
+        ) === String(userWorkplaceId);
 
       const matchesSearch =
         item.product?.name

@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-
-const API_URL = "http://localhost:3030/api/v1";
+import { API_URL } from "../../config/api.js";
 
 // Fetch all customers
 export const fetchCustomersAsync = createAsyncThunk(

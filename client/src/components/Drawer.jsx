@@ -7,9 +7,17 @@ import bgDark from "../assets/bg/bgScuro.jpg";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 
-const Drawer = ({ open, onClose, title, children, width = "w-[420px]" }) => {
+const Drawer = ({
+  open,
+  onClose,
+  title,
+  children,
+  width = "w-[420px]",
+  variant = "default",
+}) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const isLiquidGlass = variant === "liquid-glass";
 
   /* Close drawer when ESC key is pressed */
   useEffect(() => {
@@ -29,16 +37,24 @@ const Drawer = ({ open, onClose, title, children, width = "w-[420px]" }) => {
 
       {/* Background overlay */}
       <div
-        className="drawer-overlay"
+        className={`drawer-overlay${
+          isLiquidGlass ? " drawer-overlay--liquid-glass" : ""
+        }`}
         onClick={onClose}
       />
 
       {/* Drawer panel */}
       <aside
-        className={`drawer-panel ${width}`}
-        style={{
-          "--drawer-bg-image": `url(${theme === "dark" ? bgDark : bgLight})`,
-        }}
+        className={`drawer-panel ${width}${
+          isLiquidGlass ? " drawer-panel--liquid-glass" : ""
+        }`}
+        style={
+          isLiquidGlass
+            ? undefined
+            : {
+                "--drawer-bg-image": `url(${theme === "dark" ? bgDark : bgLight})`,
+              }
+        }
         role="dialog"
         aria-modal="true"
       >

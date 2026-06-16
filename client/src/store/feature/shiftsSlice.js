@@ -4,6 +4,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 // Import API request functions for shifts
 import {
 	fetchAllShiftsRequest,
+	fetchWorkplaceShiftsRequest,
 	fetchUserShiftsRequest,
 	updateShiftRequest,
 	deleteShiftRequest,
@@ -32,6 +33,26 @@ export const fetchAllShiftsAsync = createAsyncThunk(
 			return data.data;
 		} catch {
 			// Handle network errors
+			return rejectWithValue("Errore di rete.");
+		}
+	}
+);
+
+/* ------------------- GET WORKPLACE ------------------- */
+export const fetchWorkplaceShiftsAsync = createAsyncThunk(
+	"shifts/fetchWorkplace",
+	async ({ token }, { dispatch, rejectWithValue }) => {
+		try {
+			const { res, data } = await fetchWorkplaceShiftsRequest({ token });
+
+			if (res.status === 401) {
+				dispatch(logout());
+				return rejectWithValue(sessionExpiredMessage);
+			}
+			if (!res.ok) return rejectWithValue(data.message);
+
+			return data.data;
+		} catch {
 			return rejectWithValue("Errore di rete.");
 		}
 	}
@@ -124,6 +145,7 @@ const shiftsSlice = createSlice({
 	name: "shifts",
 	initialState: {
 		list: [], // List of all shifts
+		workplaceList: [], // Shifts for users at the same workplace
 		current: null, // Currently selected or viewed shift
 		loading: false, // Loading state for async actions
 		error: null, // Error message, if any
@@ -144,6 +166,19 @@ const shiftsSlice = createSlice({
 				s.list = a.payload;
 			})
 			.addCase(fetchAllShiftsAsync.rejected, (s, a) => {
+				s.loading = false;
+				s.error = a.payload;
+			})
+
+			.addCase(fetchWorkplaceShiftsAsync.pending, (s) => {
+				s.loading = true;
+				s.error = null;
+			})
+			.addCase(fetchWorkplaceShiftsAsync.fulfilled, (s, a) => {
+				s.loading = false;
+				s.workplaceList = a.payload;
+			})
+			.addCase(fetchWorkplaceShiftsAsync.rejected, (s, a) => {
 				s.loading = false;
 				s.error = a.payload;
 			})

@@ -23,7 +23,7 @@ router.post("/tickets/classify", authUser, postClassifyTicket);
 router.post("/tickets/reply", authUser, requireAdmin, postGenerateTicketReply);
 router.post("/tickets/suggestions", authUser, requireAdmin, postTicketSuggestions);
 router.post("/tickets/insights", authUser, requireAdmin, postTicketInsights);
-router.post("/warehouse/suggestions", authUser, requireAdmin, postWarehouseSuggestions);
+router.post("/warehouse/suggestions", authUser, postWarehouseSuggestions);
 router.post("/shifts/analyze", authUser, requireAdmin, postShiftAnalysis);
 router.post("/communications/generate", authUser, requireAdmin, postGenerateCommunication);
 router.post("/dashboard/insights", authUser, requireAdmin, postDashboardInsights);

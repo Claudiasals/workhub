@@ -18,10 +18,15 @@
 }
 
 .warehouse-toolbar {
-  @apply flex flex-wrap items-center gap-3 mb-3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
   min-width: 0;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  row-gap: 0.75rem;
 }
 
 .warehouse-toolbar-left,
@@ -33,22 +38,26 @@
   min-width: 0;
 }
 
+.warehouse-toolbar-left {
+  flex: 0 1 auto;
+}
+
 .warehouse-toolbar-search {
-  flex: 0 1 15rem;
-  min-width: 0;
-  max-width: 15rem;
+  flex: 1 1 12rem;
+  min-width: min(100%, 10rem);
+  max-width: none;
 }
 
 .warehouse-toolbar-actions {
-  margin-left: auto;
+  margin-left: 0;
   justify-content: flex-end;
-  flex-shrink: 0;
+  flex: 0 1 auto;
 }
 
 .warehouse-search {
   width: 100%;
   min-width: 0;
-  max-width: 15rem;
+  max-width: none;
   padding: 0.5rem 0.75rem;
   border: 1px solid white;
   border-radius: 0.75rem;
@@ -65,15 +74,8 @@
 }
 
 @media (max-width: 900px) {
-  .warehouse-toolbar-left,
-  .warehouse-toolbar-search,
-  .warehouse-toolbar-actions {
-    width: 100%;
-  }
-
-  .warehouse-toolbar-actions {
-    margin-left: 0;
-    justify-content: flex-start;
+  .warehouse-toolbar-search {
+    flex: 1 1 100%;
   }
 }
 
@@ -275,8 +277,8 @@
 
 /* ===== SUMMARY BOXES ===== */
 .warehouse-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
@@ -284,6 +286,8 @@
   box-sizing: border-box;
   height: 48px;
   min-height: 48px;
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
   padding: 0 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -321,8 +325,8 @@
   background: #090c64 !important;
   border-color: transparent;
   color: white;
-  min-width: 220px;
-  width: max-content;
+  min-width: min(100%, 12rem);
+  width: auto;
   justify-content: center;
   padding: 0 18px;
 }
@@ -340,6 +344,17 @@
 
 .warehouse-summary-btn.disabled {
   cursor: default;
+}
+
+.warehouse-summary-btn.is-active {
+  border-color: rgba(9, 12, 100, 0.45);
+  box-shadow:
+    0 8px 14px -8px rgba(9, 12, 100, 0.35),
+    0 2px 4px -2px rgb(0 0 0 / 0.14);
+}
+
+.dark .warehouse-summary-btn.is-active {
+  border-color: rgba(255, 255, 255, 0.95);
 }
 
 .warehouse-summary-label {
@@ -371,8 +386,3 @@
   opacity: 1;
 }
 
-@media (max-width: 900px) {
-  .warehouse-summary {
-    grid-template-columns: 1fr;
-  }
-}

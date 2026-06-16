@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getAllShifts,
+  getWorkplaceShifts,
   getShiftsByUser,
   updateShift,
   deleteShift,
@@ -10,6 +11,9 @@ import { authUser } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/roles.js";
 
 const router = express.Router();
+
+// Workplace shifts (all employees at user's location)
+router.get("/workplace", authUser, getWorkplaceShifts);
 
 // Get all users' shifts (admin only)
 router.get("/", authUser, requireAdmin, getAllShifts);

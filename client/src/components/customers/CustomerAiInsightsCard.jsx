@@ -11,7 +11,7 @@ import {
   fetchCustomerAiInsightsRequest,
   generateCustomerPromoEmailRequest,
 } from "../../api/aiApi";
-import { analyzeCustomerAiLocal, generatePromoEmailLocal } from "../../utils/customerAiAnalyzer";
+import { analyzeCustomerAiLocal, buildPromoDisplayForCustomer, generatePromoEmailLocal } from "../../utils/customerAiAnalyzer";
 import { useLanguage } from "../../context/LanguageContext";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -41,6 +41,7 @@ export function CustomerAiInsightsCard({
   const [error, setError] = useState("");
   const [emailModal, setEmailModal] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [promoDisplayModal, setPromoDisplayModal] = useState(null);
   const [promoIndex, setPromoIndex] = useState(0);
 
   const loadInsights = useCallback(async () => {
@@ -94,6 +95,25 @@ export function CustomerAiInsightsCard({
     } finally {
       setEmailLoading(false);
     }
+  };
+
+  const handleShowToCustomer = async (index = promoIndex) => {
+    const promotion = data?.promotions?.[index];
+    if (!promotion || !customer) return;
+
+    const display = buildPromoDisplayForCustomer({ customer, promotion, t, lang });
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(display.clipboardText);
+        setPromoDisplayModal({ ...display, copied: true });
+        return;
+      }
+    } catch {
+      // Mostra comunque il modal se la clipboard non è disponibile
+    }
+
+    setPromoDisplayModal(display);
   };
 
   const profile = data?.profile;
@@ -223,18 +243,13 @@ export function CustomerAiInsightsCard({
                   >
                     {emailLoading ? t("aiLoading") : t("customerAiSendPromo")}
                   </button>
-                  {!compact && promotion && (
-                    <button
-                      type="button"
-                      className="custom-button-light text-xs"
-                      onClick={() => {
-                        const text = `${promotion.discountPercent}% ${t("customerAiOn")} ${promotion.productName}\n${promotion.motivation}`;
-                        navigator.clipboard?.writeText(text);
-                      }}
-                    >
-                      {t("customerAiShowToCustomer")}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="custom-button-light text-xs"
+                    onClick={() => handleShowToCustomer(promoIndex)}
+                  >
+                    {t("customerAiShowToCustomer")}
+                  </button>
                 </div>
               </div>
             )}
@@ -249,6 +264,19 @@ export function CustomerAiInsightsCard({
         tone="success"
         closeLabel={t("chiudi")}
         onClose={() => setEmailModal(null)}
+      />
+
+      <AppFeedbackModal
+        open={Boolean(promoDisplayModal)}
+        title={promoDisplayModal?.title || t("customerAiPromoShowTitle")}
+        message={
+          promoDisplayModal?.copied
+            ? `${promoDisplayModal.body}\n\n${t("customerAiPromoCopied")}`
+            : promoDisplayModal?.body || ""
+        }
+        tone="info"
+        closeLabel={t("chiudi")}
+        onClose={() => setPromoDisplayModal(null)}
       />
     </>
   );

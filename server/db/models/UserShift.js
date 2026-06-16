@@ -2,8 +2,9 @@ import { Schema, model } from "mongoose";
 
 const DayShiftSchema = new Schema(
   {
-    morning: { type: Boolean, default: false },
-    afternoon: { type: Boolean, default: false },
+    early: { type: Boolean, default: false },
+    mid: { type: Boolean, default: false },
+    late: { type: Boolean, default: false },
   },
   { _id: false }
 );
@@ -14,16 +15,16 @@ const UserShiftSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, 
+      unique: true,
     },
 
     shifts: {
-      monday:    { type: DayShiftSchema, default: () => ({}) },
-      tuesday:   { type: DayShiftSchema, default: () => ({}) },
+      monday: { type: DayShiftSchema, default: () => ({}) },
+      tuesday: { type: DayShiftSchema, default: () => ({}) },
       wednesday: { type: DayShiftSchema, default: () => ({}) },
-      thursday:  { type: DayShiftSchema, default: () => ({}) },
-      friday:    { type: DayShiftSchema, default: () => ({}) },
-      saturday:  { type: DayShiftSchema, default: () => ({}) },
+      thursday: { type: DayShiftSchema, default: () => ({}) },
+      friday: { type: DayShiftSchema, default: () => ({}) },
+      saturday: { type: DayShiftSchema, default: () => ({}) },
     },
   },
   { strict: true, timestamps: true, versionKey: false }

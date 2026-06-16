@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 // UI-only filters state for the warehouse table
 // This slice manages frontend logic only (no backend sync)
 const initialState = {
-  selectedCategory: "All categories", // Currently selected product category
+  selectedCategory: null,
   searchTerm: "",                     // Text search input
   sortAZ: false,                      // A–Z sorting toggle
   lowStockFilter: false,              // Low stock filter toggle
@@ -35,7 +35,7 @@ const warehouseFiltersSlice = createSlice({
 
     // Reset all filters to default values
     resetFilters(state) {
-      state.selectedCategory = "All categories";
+      state.selectedCategory = null;
       state.searchTerm = "";
       state.sortAZ = false;
       state.lowStockFilter = false;

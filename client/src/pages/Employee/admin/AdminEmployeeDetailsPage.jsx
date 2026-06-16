@@ -22,6 +22,13 @@ import {
   updateLeaveStatusAsync,
 } from "../../../store/feature/userLeave";
 import AppFeedbackModal from "../../../components/AppFeedbackModal";
+import {
+  SHIFT_PERIOD_KEYS,
+  countWorkingDays,
+  countWeeklyHours,
+  getDaySlots,
+  getShiftPeriodHoursLabel,
+} from "../../../utils/shiftPeriods";
 
 /* STATUS DOT COMPONENT */
 const StatusDot = ({ status }) => {
@@ -152,7 +159,7 @@ const AdminEmployeeDetailsPage = () => {
   const handleCreateShift = async (dayKey, period) => {
     if (!token || !userShifts?._id) return;
 
-    if (userShifts?.shifts?.[dayKey]?.[period]) {
+    if (getDaySlots(userShifts?.shifts?.[dayKey])[period]) {
       showShiftMessage(t("turnoPresente"), "warning");
       return;
     }
@@ -212,11 +219,13 @@ const AdminEmployeeDetailsPage = () => {
   /* TOP STATS */
   const giorniLavorati = useMemo(() => {
     if (!userShifts?.shifts) return 0;
-    return weekDays.reduce((acc, d) => {
-      const day = userShifts.shifts[d.key] || {};
-      return day.morning || day.afternoon ? acc + 1 : acc;
-    }, 0);
-  }, [userShifts, weekDays]);
+    return countWorkingDays(userShifts.shifts);
+  }, [userShifts]);
+
+  const oreSettimanali = useMemo(() => {
+    if (!userShifts?.shifts) return 0;
+    return countWeeklyHours(userShifts.shifts);
+  }, [userShifts]);
 
   const topStats = [
     { label: t("giorniLavorati"), number: giorniLavorati, icon: CalendarCheckIcon },
@@ -284,6 +293,14 @@ const AdminEmployeeDetailsPage = () => {
         <div className="custom-box p-6">
           <div className="mb-2">
             <h2>{t("turniSettimanali")}</h2>
+            <p className="text-xs opacity-70 mt-1">{t("shiftsWeeklyContractHint")}</p>
+            {userShifts?.shifts && (
+              <p className="text-xs font-semibold opacity-80 mt-1">
+                {t("shiftsWeeklyHoursSummary")
+                  .replace("{hours}", String(oreSettimanali))
+                  .replace("{days}", String(giorniLavorati))}
+              </p>
+            )}
           </div>
 
           {shiftsError && (
@@ -294,8 +311,9 @@ const AdminEmployeeDetailsPage = () => {
 
           <div className="flex flex-col gap-2">
             {weekDays.map((day) => {
-              const d = userShifts?.shifts?.[day.key] || {};
-              const hasAny = d.morning || d.afternoon;
+              const d = getDaySlots(userShifts?.shifts?.[day.key]);
+              const hasAny = SHIFT_PERIOD_KEYS.some((period) => d[period]);
+              const activePeriod = SHIFT_PERIOD_KEYS.find((period) => d[period]);
 
               return (
                 <div
@@ -304,45 +322,35 @@ const AdminEmployeeDetailsPage = () => {
                 >
                   <span className="font-semibold">{day.label}</span>
 
-                  <div className="employee-shift-actions">
-                    {d.morning ? (
-                      <span className="bg-[#090c64] text-white text-xs px-3 py-1 rounded-xl">
-                        08:00 - 13:00
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() =>
-                          handleCreateShift(day.key, "morning")
-                        }
-                        className="bg-white/40 text-[#090c64] text-sm px-3 py-1 rounded-xl"
-                      >
-                        08:00 - 13:00
-                      </button>
-                    )}
+                  <div className="employee-shift-actions flex flex-wrap gap-2">
+                    {SHIFT_PERIOD_KEYS.map((period) => {
+                      const label = getShiftPeriodHoursLabel(period);
+                      if (d[period]) {
+                        return (
+                          <span
+                            key={period}
+                            className="bg-[#090c64] text-white text-xs px-3 py-1 rounded-xl"
+                          >
+                            {label}
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={() => handleCreateShift(day.key, period)}
+                          className="bg-white/40 text-[#090c64] text-sm px-3 py-1 rounded-xl"
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
 
-                    {d.afternoon ? (
-                      <span className="bg-[#090c64] text-white text-xs px-3 py-1 rounded-xl">
-                        14:00 - 18:00
-                      </span>
-                    ) : (
+                    {hasAny && activePeriod && (
                       <button
-                        onClick={() =>
-                          handleCreateShift(day.key, "afternoon")
-                        }
-                        className="bg-white/40 text-[#090c64] text-sm px-3 py-1 rounded-xl"
-                      >
-                        14:00 - 18:00
-                      </button>
-                    )}
-
-                    {hasAny && (
-                      <button
-                        onClick={() => {
-                          if (d.morning)
-                            handleDeleteSingleShift(day.key, "morning");
-                          if (d.afternoon)
-                            handleDeleteSingleShift(day.key, "afternoon");
-                        }}
+                        type="button"
+                        onClick={() => handleDeleteSingleShift(day.key, activePeriod)}
                         className="p-2 bg-white/60 rounded-xl"
                       >
                         <TrashIcon

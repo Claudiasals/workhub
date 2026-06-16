@@ -10,6 +10,7 @@ import {
 
 import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import { API_URL } from "../../config/api";
 
 const Product = () => {
   // Get product ID from URL
@@ -25,7 +26,7 @@ const Product = () => {
 
   // Fetch product by ID
   useEffect(() => {
-    fetch(`http://localhost:3030/api/v1/items/${id}`)
+    fetch(`${API_URL}/items/${id}`)
       .then((res) => res.json())
       .then((data) => {
         setItem(data);

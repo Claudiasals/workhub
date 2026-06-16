@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   FileTextIcon,
   MagnifyingGlassIcon,
@@ -16,6 +17,7 @@ import {
   saveCompanyDocuments,
   createDocumentId,
 } from "../../utils/companyDocumentsStorage";
+import { markDocumentReadInNotifications } from "../../utils/notificationStorage";
 
 const importanceClass = {
   critical: "doc-importance--critical",
@@ -36,6 +38,8 @@ const emptyForm = () => ({
 export function CompanyDocumentsSection({ canManage = false }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const authUser = useSelector((state) => state.auth.user);
+  const userId = authUser?._id || authUser?.id;
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
   const iconColor = theme === "dark" ? "white" : "#090c64";
 
@@ -48,7 +52,16 @@ export function CompanyDocumentsSection({ canManage = false }) {
 
   useEffect(() => {
     saveCompanyDocuments(documents);
+    window.dispatchEvent(new Event("workhub-documents-updated"));
   }, [documents]);
+
+  const openDocument = (doc) => {
+    if (userId) {
+      markDocumentReadInNotifications(userId, doc.id);
+      window.dispatchEvent(new Event("workhub-documents-updated"));
+    }
+    setSelectedDoc(doc);
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -112,7 +125,7 @@ export function CompanyDocumentsSection({ canManage = false }) {
                 placeholder={t("cerca")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="table-search card-toolbar-search !pl-9 !w-auto !max-w-[14rem]"
+                className="table-search card-toolbar-search w-full min-w-0 !pl-9"
               />
             </div>
             {canManage && (
@@ -148,7 +161,7 @@ export function CompanyDocumentsSection({ canManage = false }) {
                 <button
                   type="button"
                   className="custom-button company-doc-card__btn"
-                  onClick={() => setSelectedDoc(doc)}
+                  onClick={() => openDocument(doc)}
                 >
                   {t("companyDocsRead")}
                 </button>

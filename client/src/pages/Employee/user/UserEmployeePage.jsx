@@ -15,6 +15,13 @@ import {
   fetchLeaveAsync,
   createLeaveRequestAsync,
 } from "../../../store/feature/userLeave";
+import {
+  getDaySlots,
+  getShiftPeriodHoursLabel,
+  SHIFT_PERIOD_KEYS,
+  countWorkingDays,
+  countWeeklyHours,
+} from "../../../utils/shiftPeriods";
 
 /* STATUS DOT - Small colored dot based on request status*/
 const StatusDot = ({ status }) => {
@@ -163,22 +170,26 @@ const UserEmployeePage = () => {
 
     return weekDays
       .map((day) => {
-        const d = userShifts.shifts[day.key] || {};
-        const morning = d.morning ? "08:00 - 13:00" : "";
-        const afternoon = d.afternoon ? "14:00 - 18:00" : "";
-
-        if (!morning && !afternoon) return null;
+        const d = getDaySlots(userShifts.shifts[day.key]);
+        const activePeriod = SHIFT_PERIOD_KEYS.find((period) => d[period]);
+        if (!activePeriod) return null;
 
         return {
           day: day.label,
-          hours:
-            morning && afternoon
-              ? `${morning} / ${afternoon}`
-              : morning || afternoon,
+          hours: getShiftPeriodHoursLabel(activePeriod),
         };
       })
       .filter(Boolean);
   }, [userShifts, weekDays]);
+
+  const giorniLavorati = useMemo(
+    () => countWorkingDays(userShifts?.shifts || {}),
+    [userShifts]
+  );
+  const oreSettimanali = useMemo(
+    () => countWeeklyHours(userShifts?.shifts || {}),
+    [userShifts]
+  );
 
   /* LEAVE LISTS */
   const realFerieList =
@@ -323,6 +334,14 @@ const UserEmployeePage = () => {
         <div className="custom-box p-6">
           <div className="mb-4">
             <h2>{t("turniSettimanali")}</h2>
+            <p className="text-xs opacity-70 mt-1">{t("shiftsWeeklyContractHint")}</p>
+            {userShifts?.shifts && (
+              <p className="text-xs font-semibold opacity-80 mt-1">
+                {t("shiftsWeeklyHoursSummary")
+                  .replace("{hours}", String(oreSettimanali))
+                  .replace("{days}", String(giorniLavorati))}
+              </p>
+            )}
           </div>
 
           {shiftsLoading && (

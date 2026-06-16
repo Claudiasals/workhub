@@ -119,6 +119,123 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+/* =====================================================
+   LIQUID GLASS DRAWER (user-facing panels)
+===================================================== */
+
+.drawer-overlay--liquid-glass {
+  background-color: rgba(4, 6, 22, 0.22);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.dark .drawer-overlay--liquid-glass {
+  background-color: rgba(4, 6, 22, 0.28);
+}
+
+.drawer-panel--liquid-glass {
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  height: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(250, 250, 250, 0.125);
+  background-image: none;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  color: #090c64;
+}
+
+.dark .drawer-panel--liquid-glass {
+  background-color: rgba(250, 250, 250, 0.063);
+  border-color: rgba(255, 255, 255, 0.8);
+  color: white;
+}
+
+.drawer-panel--liquid-glass .drawer-header {
+  border-radius: 0.75rem 0.75rem 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.dark .drawer-panel--liquid-glass .drawer-header {
+  border-bottom-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.drawer-panel--liquid-glass .drawer-input,
+.drawer-panel--liquid-glass .drawer-search {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 2px rgba(9, 12, 100, 0.06);
+  color: #090c64;
+  outline: none;
+}
+
+.drawer-panel--liquid-glass .drawer-input:focus,
+.drawer-panel--liquid-glass .drawer-search:focus {
+  border-color: rgba(9, 12, 100, 0.35);
+  box-shadow: 0 0 0 2px rgba(9, 12, 100, 0.08);
+}
+
+.dark .drawer-panel--liquid-glass .drawer-input,
+.dark .drawer-panel--liquid-glass .drawer-search {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: white;
+}
+
+.dark .drawer-panel--liquid-glass .drawer-input:focus,
+.dark .drawer-panel--liquid-glass .drawer-search:focus {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.dark .drawer-panel--liquid-glass .drawer-input::placeholder,
+.dark .drawer-panel--liquid-glass .drawer-search::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.drawer-panel--liquid-glass .order-drawer-section {
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background-color: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.dark .drawer-panel--liquid-glass .order-drawer-section {
+  border-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 480px) {
+  .drawer-panel--liquid-glass {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0;
+    border-right: none;
+    border-top: none;
+    border-bottom: none;
+  }
+
+  .drawer-panel--liquid-glass .drawer-header {
+    border-radius: 0;
+  }
+}
+
 .drawer-label {
   @apply block mb-2 font-semibold;
 }
@@ -237,6 +354,8 @@
 
 .ticket-page-toolbar {
   margin-bottom: 0;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
 }
 
 .ticket-page-list {
@@ -251,6 +370,34 @@
 .ticket-page-list,
 .ticket-page-list section {
   min-height: 0;
+}
+
+.ticket-user-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .ticket-user-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.ticket-user-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ticket-user-column__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .ticket-status-pill.is-open {
@@ -311,9 +458,9 @@
 
 .ticket-admin-filters__search {
   position: relative;
-  flex: 1 1 14rem;
-  min-width: 11rem;
-  max-width: 22rem;
+  flex: 1 1 12rem;
+  min-width: min(100%, 10rem);
+  max-width: none;
 }
 
 .ticket-admin-filters__search-icon {
@@ -404,12 +551,6 @@
   min-width: 0;
   height: 35px;
   box-sizing: border-box;
-}
-
-@media (min-width: 1024px) {
-  .ticket-admin-filters__controls {
-    flex-wrap: nowrap;
-  }
 }
 
 @media (max-width: 767px) {

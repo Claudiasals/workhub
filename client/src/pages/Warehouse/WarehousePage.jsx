@@ -10,11 +10,13 @@ import { AiAlertList, AiInsightPanel } from "../../components/ai/AiInsightPanel"
 
 import WarehouseTable from "../../components/Warehouse/WarehouseTable";
 import DrawerAddNewProduct from "../../components/Warehouse/DrawerAddNewProduct";
+import { getWorkplaceId } from "../../utils/shiftsCalendar";
 
 import {
   WarehouseIcon,
   PlusCircleIcon,
   WarningOctagonIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 
 const getItemStock = (item) =>
@@ -30,26 +32,28 @@ const WarehousePage = () => {
   const { t, lang } = useLanguage();
   const { theme } = useTheme();
   const token = useSelector((state) => state.auth.token);
+  const role = useSelector((state) => state.auth.user?.role);
+  const authUser = useSelector((state) => state.auth.user);
+  const isAdmin = role === "admin";
+  const userWorkplaceId = getWorkplaceId(authUser);
 
   const items = useSelector((state) => state.items.list);
-  const userWorkplace = useSelector((state) => state.auth.user?.workplace);
-  const userWorkplaceId =
-    typeof userWorkplace === "string"
-      ? userWorkplace
-      : userWorkplace?._id || userWorkplace?.id;
+  const itemsStatus = useSelector((state) => state.items.status);
+  const itemsError = useSelector((state) => state.items.error);
 
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
   const [drawerAddOpen, setDrawerAddOpen] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState(null);
 
   useEffect(() => {
-    if (userWorkplaceId) {
+    if (token) {
       dispatch(fetchItems());
     }
-  }, [userWorkplaceId, dispatch]);
+  }, [token, dispatch]);
 
   const loadWarehouseAi = useCallback(async () => {
     if (!token) return;
@@ -82,6 +86,10 @@ const WarehousePage = () => {
     }
   }, [token, loadWarehouseAi]);
 
+  const toggleUserAiPanel = () => {
+    setAiPanelOpen((current) => !current);
+  };
+
   const columns = [
     "sku",
     "product",
@@ -99,8 +107,8 @@ const WarehousePage = () => {
   };
 
   const filteredItems = useMemo(() => {
-    if (!items || items.length === 0) return [];
-    if (!userWorkplaceId) return items;
+    if (!items?.length) return [];
+    if (isAdmin || !userWorkplaceId) return items;
 
     return items.filter((item) => {
       const itemWorkplaceId =
@@ -110,34 +118,58 @@ const WarehousePage = () => {
 
       return String(itemWorkplaceId) === String(userWorkplaceId);
     });
-  }, [items, userWorkplaceId]);
+  }, [items, userWorkplaceId, isAdmin]);
 
   const lowStockItems = useMemo(
     () => filteredItems.filter(isLowStockItem),
     [filteredItems]
   );
 
-  const summaryButtons = [
-    {
-      label: t("totArticoli"),
-      number: filteredItems.length,
-      icon: WarehouseIcon,
-      clickable: false,
-    },
-    {
-      label: t("articoliInEsaurimento"),
-      number: lowStockItems.length,
-      icon: WarningOctagonIcon,
-      clickable: false,
-    },
-    {
-      label: t("caricaGiacenza"),
-      icon: PlusCircleIcon,
-      clickable: true,
-      variant: "primary",
-      onClick: () => setDrawerAddOpen(true),
-    },
-  ];
+  const summaryButtons = isAdmin
+    ? [
+        {
+          label: t("totArticoli"),
+          number: filteredItems.length,
+          icon: WarehouseIcon,
+          clickable: false,
+        },
+        {
+          label: t("articoliInEsaurimento"),
+          number: lowStockItems.length,
+          icon: WarningOctagonIcon,
+          clickable: false,
+        },
+        {
+          label: t("caricaGiacenza"),
+          icon: PlusCircleIcon,
+          clickable: true,
+          variant: "primary",
+          onClick: () => setDrawerAddOpen(true),
+        },
+      ]
+    : [
+        {
+          label: t("totArticoli"),
+          number: filteredItems.length,
+          icon: WarehouseIcon,
+          clickable: false,
+        },
+        {
+          label: t("aiWarehouseSummary"),
+          number: localizedSuggestions.length,
+          icon: SparkleIcon,
+          clickable: true,
+          active: aiPanelOpen,
+          onClick: toggleUserAiPanel,
+        },
+        {
+          label: t("caricaGiacenza"),
+          icon: PlusCircleIcon,
+          clickable: true,
+          variant: "primary",
+          onClick: () => setDrawerAddOpen(true),
+        },
+      ];
 
   return (
     <div className="warehouse-page">
@@ -156,7 +188,7 @@ const WarehousePage = () => {
                 onClick={btn.clickable ? btn.onClick : undefined}
                 className={`warehouse-summary-btn ${
                   btn.clickable ? "clickable" : "disabled"
-                } ${isPrimary ? "primary" : ""}`}
+                } ${isPrimary ? "primary" : ""}${btn.active ? " is-active" : ""}`}
               >
                 <span className="warehouse-summary-label">
                   <Icon
@@ -186,22 +218,35 @@ const WarehousePage = () => {
           })}
         </div>
 
-        <AiInsightPanel
-          title={t("aiWarehouseTitle")}
-          loading={aiLoading}
-          error={aiError}
-          source={aiSuggestions?.source}
-          onRefresh={loadWarehouseAi}
-          hasData={localizedSuggestions.length > 0}
-          className={`w-full mb-4 ${textColor}`}
-        >
-          <AiAlertList
-            items={localizedSuggestions}
-            sortBySeverity
-            compact
-            initialLimit={3}
-          />
-        </AiInsightPanel>
+        {(isAdmin || aiPanelOpen) && (
+          <AiInsightPanel
+            title={t("aiWarehouseTitle")}
+            loading={aiLoading}
+            error={aiError}
+            source={aiSuggestions?.source}
+            onRefresh={loadWarehouseAi}
+            onClose={!isAdmin ? () => setAiPanelOpen(false) : undefined}
+            hasData={localizedSuggestions.length > 0}
+            className={`w-full mb-4 ${textColor}`}
+          >
+            <AiAlertList
+              items={localizedSuggestions}
+              sortBySeverity
+              compact
+              initialLimit={isAdmin ? 3 : null}
+            />
+          </AiInsightPanel>
+        )}
+
+        {itemsStatus === "failed" && (
+          <p className="mb-3 text-sm font-semibold text-red-500">
+            {itemsError || t("erroreCaricamentoMagazzino")}
+          </p>
+        )}
+
+        {itemsStatus === "loading" && !items?.length && (
+          <p className="mb-3 text-sm opacity-70">{t("caricamentoMagazzino")}</p>
+        )}
 
         <WarehouseTable
           data={filteredItems}

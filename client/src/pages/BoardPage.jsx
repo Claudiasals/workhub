@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import { ChartLineUpIcon } from "@phosphor-icons/react";
 
 import { useTheme } from "../context/ThemeContext";
@@ -19,6 +20,7 @@ import BusinessOverviewPanel from "../components/dashboard/BusinessOverviewPanel
 import SalesTrendChart from "../components/dashboard/SalesTrendChart";
 import DashboardCalendar from "../components/dashboard/DashboardCalendar";
 import CompanyDocumentsSection from "../components/dashboard/CompanyDocumentsSection";
+import { hasAnyShift } from "../utils/shiftPeriods";
 
 const MS_DAY = 86400000;
 const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -28,6 +30,7 @@ const getItemStock = (item) =>
 
 const BoardPage = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { theme } = useTheme();
   const { t } = useLanguage();
   const token = useSelector((state) => state.auth.token);
@@ -110,6 +113,16 @@ const BoardPage = () => {
     }
   }, [dispatch, token, isAdmin, authUser?._id]);
 
+  useEffect(() => {
+    const hash = location.hash.replace("#", "");
+    if (!hash) return;
+
+    const target = document.getElementById(`dashboard-${hash}`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [location.hash]);
+
   const loadBusinessOverview = useCallback(async () => {
     if (!token || !isAdmin) return;
     setOverviewLoading(true);
@@ -164,13 +177,10 @@ const BoardPage = () => {
 
     if (isAdmin) {
       shifts.forEach((doc) => {
-        const slots = doc.shifts?.[todayKey];
-        if (slots?.morning) staffOnShift += 1;
-        if (slots?.afternoon) staffOnShift += 1;
+        if (hasAnyShift(doc.shifts?.[todayKey])) staffOnShift += 1;
       });
     } else if (userShifts?.shifts?.[todayKey]) {
-      const slots = userShifts.shifts[todayKey];
-      staffOnShift = (slots.morning ? 1 : 0) + (slots.afternoon ? 1 : 0);
+      staffOnShift = hasAnyShift(userShifts.shifts[todayKey]) ? 1 : 0;
     }
 
     return {
@@ -182,13 +192,31 @@ const BoardPage = () => {
     };
   }, [scopedOrders, tickets, scopedItems, shifts, userShifts, isAdmin]);
 
+  const salesChartSection = (
+    <section className={`app-surface flex flex-col gap-3 p-4 min-w-0 w-full ${textColor}`}>
+      <div className="dashboard-card-header flex items-center gap-3">
+        <ChartLineUpIcon
+          size={24}
+          color={theme === "dark" ? "white" : "#090c64"}
+          weight="duotone"
+        />
+        <h3 className="text-sm font-bold">{t("andamentoVendite")}</h3>
+      </div>
+      <SalesTrendChart
+        orders={scopedOrders}
+        customers={customers ?? []}
+        theme={theme}
+      />
+    </section>
+  );
+
   return (
     <div
       data-page-scroll
       className="dashboard-page-section w-full h-full overflow-y-auto
       [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
     >
-      <DashboardKpiRow {...kpiMetrics} isAdmin={isAdmin} />
+      {isAdmin && <DashboardKpiRow {...kpiMetrics} isAdmin={isAdmin} />}
 
       {isAdmin && (
         <BusinessOverviewPanel
@@ -201,25 +229,27 @@ const BoardPage = () => {
         />
       )}
 
-      <section className={`app-surface flex flex-col gap-3 p-4 min-w-0 w-full ${textColor}`}>
-        <div className="dashboard-card-header flex items-center gap-3">
-          <ChartLineUpIcon
-            size={24}
-            color={theme === "dark" ? "white" : "#090c64"}
-            weight="duotone"
-          />
-          <h3 className="text-sm font-bold">{t("andamentoVendite")}</h3>
-        </div>
-        <SalesTrendChart
-          orders={scopedOrders}
-          customers={customers ?? []}
-          theme={theme}
-        />
-      </section>
-
-      <DashboardCalendar canManage={isAdmin} />
-
-      <CompanyDocumentsSection canManage={isAdmin} />
+      {isAdmin ? (
+        <>
+          {salesChartSection}
+          <div id="dashboard-calendar">
+            <DashboardCalendar canManage={isAdmin} />
+          </div>
+          <div id="dashboard-documents">
+            <CompanyDocumentsSection canManage={isAdmin} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div id="dashboard-calendar">
+            <DashboardCalendar canManage={isAdmin} />
+          </div>
+          <div id="dashboard-documents">
+            <CompanyDocumentsSection canManage={isAdmin} />
+          </div>
+          {salesChartSection}
+        </>
+      )}
     </div>
   );
 };

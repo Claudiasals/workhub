@@ -8,7 +8,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js --trace-warnings",
-    "seed:calendar": "node api/v1/seed/runSeedCalendarWeek.js"
+    "seed:calendar": "node api/v1/seed/runSeedCalendarWeek.js",
+    "seed:items": "node api/v1/seed/seedItems.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

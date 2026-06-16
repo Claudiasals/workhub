@@ -109,7 +109,7 @@ const Table = ({
                 placeholder={t("cerca")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="table-search !w-auto min-w-0 max-w-[15rem]"
+                className="table-search w-full min-w-0"
               />
             </div>
           )}

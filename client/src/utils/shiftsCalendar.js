@@ -9,20 +9,15 @@ import {
   startOfWeek,
 } from "date-fns";
 import { it, enGB } from "date-fns/locale";
+import {
+  SHIFT_HOURS,
+  SHIFT_PERIOD_KEYS,
+  SHIFT_SLOT_TIMES,
+  WORKDAY_KEYS,
+  getDaySlots,
+} from "./shiftPeriods";
 
-export const SHIFT_HOURS = {
-  morning: "08:00-13:00",
-  afternoon: "14:00-18:00",
-};
-
-export const WORKDAY_KEYS = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
+export { SHIFT_HOURS, SHIFT_SLOT_TIMES, WORKDAY_KEYS };
 
 const DATE_TO_KEY = [
   "sunday",
@@ -49,28 +44,45 @@ export const CALENDAR_PALETTE = [
 ];
 
 export const SHIFT_PERIOD_COLORS = {
-  morning: CALENDAR_PALETTE[1],
-  afternoon: CALENDAR_PALETTE[2],
+  early: CALENDAR_PALETTE[1],
+  mid: CALENDAR_PALETTE[2],
+  late: CALENDAR_PALETTE[0],
 };
 
+export const COMPANY_EVENT_KIND_COLORS = {
+  meeting: CALENDAR_PALETTE[1],
+  event: CALENDAR_PALETTE[2],
+};
+
+/** @deprecated use COMPANY_EVENT_KIND_COLORS */
 export const COMPANY_EVENT_COLOR = CALENDAR_PALETTE[0];
 
+const MEETING_TITLE_PATTERN =
+  /\b(riunion|briefing|meeting|stand[\s-]?up|sync|colloquio|allineamento)\b/i;
+
+export function resolveCompanyEventKind({ title = "", description = "", kind } = {}) {
+  if (kind === "meeting" || kind === "event") return kind;
+
+  const tipoMatch = String(description).match(/^Tipo:\s*(riunione|evento)/im);
+  if (tipoMatch) {
+    return tipoMatch[1].toLowerCase() === "riunione" ? "meeting" : "event";
+  }
+
+  if (MEETING_TITLE_PATTERN.test(title)) return "meeting";
+
+  return "event";
+}
+
 export function getShiftPeriodStyle(period) {
-  const { bg, text } = SHIFT_PERIOD_COLORS[period] || SHIFT_PERIOD_COLORS.morning;
+  const { bg, text } = SHIFT_PERIOD_COLORS[period] || SHIFT_PERIOD_COLORS.early;
   return { backgroundColor: bg, color: text };
 }
 
-export function getCompanyEventStyle() {
-  return {
-    backgroundColor: COMPANY_EVENT_COLOR.bg,
-    color: COMPANY_EVENT_COLOR.text,
-  };
+export function getCompanyEventStyle(kind = "event") {
+  const { bg, text } =
+    COMPANY_EVENT_KIND_COLORS[kind] || COMPANY_EVENT_KIND_COLORS.event;
+  return { backgroundColor: bg, color: text };
 }
-
-export const SHIFT_SLOT_TIMES = {
-  morning: { startH: 8, endH: 13 },
-  afternoon: { startH: 14, endH: 18 },
-};
 
 export function getVisibleRange(date, view, lang) {
   const locale = getDateLocale(lang);
@@ -89,12 +101,36 @@ export function getVisibleRange(date, view, lang) {
   return { start: startOfDay(date), end: endOfDay(date) };
 }
 
+export function getWorkplaceId(user) {
+  if (!user?.workplace) return null;
+  return typeof user.workplace === "string"
+    ? user.workplace
+    : user.workplace._id || user.workplace.id || null;
+}
+
+export function filterShiftsByWorkplace(shifts = [], workplaceId) {
+  if (!workplaceId) return shifts;
+
+  return shifts.filter((shiftDoc) => {
+    const embedded = shiftDoc.user;
+    if (!embedded || typeof embedded !== "object") return false;
+
+    const wp =
+      typeof embedded.workplace === "string"
+        ? embedded.workplace
+        : embedded.workplace?._id || embedded.workplace?.id;
+
+    if (!wp) return true;
+    return String(wp) === String(workplaceId);
+  });
+}
+
 export function buildShiftCalendarEvents({
   rangeStart,
   rangeEnd,
   shifts = [],
   users = [],
-  canManage = false,
+  scope = "workplace",
   userShifts = null,
   authUser = null,
 }) {
@@ -130,10 +166,10 @@ export function buildShiftCalendarEvents({
 
     while (cursor <= end) {
       const dayKey = getDayKeyFromDate(cursor);
-      const slots = shiftDoc.shifts?.[dayKey];
+      const slots = getDaySlots(shiftDoc.shifts?.[dayKey]);
 
-      if (WORKDAY_KEYS.includes(dayKey) && slots) {
-        ["morning", "afternoon"].forEach((period) => {
+      if (WORKDAY_KEYS.includes(dayKey)) {
+        SHIFT_PERIOD_KEYS.forEach((period) => {
           if (!slots[period]) return;
           const times = SHIFT_SLOT_TIMES[period];
           const start = new Date(cursor);
@@ -158,9 +194,9 @@ export function buildShiftCalendarEvents({
     }
   };
 
-  if (!canManage && userShifts?.shifts) {
+  if (scope === "mine" && userShifts?.shifts) {
     const person = {
-      id: authUser?._id,
+      id: authUser?._id || authUser?.id,
       name:
         `${authUser?.firstName || ""} ${authUser?.lastName || ""}`.trim() ||
         "—",

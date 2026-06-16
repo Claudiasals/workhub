@@ -49,6 +49,9 @@ export const postClassifyTicket = async (req, res) => {
 
 export const postWarehouseSuggestions = async (req, res) => {
   try {
+    const isAdmin = req.user?.role === "admin";
+    const workplaceId = req.user?.workplace?._id || req.user?.workplace;
+
     const [items, orders] = await Promise.all([
       Item.find()
         .populate({ path: "product", populate: { path: "category" } })
@@ -57,9 +60,24 @@ export const postWarehouseSuggestions = async (req, res) => {
       Order.find().populate("product pointOfSales").lean(),
     ]);
 
+    let scopedItems = items;
+    let scopedOrders = orders;
+
+    if (!isAdmin && workplaceId) {
+      const workplaceKey = String(workplaceId);
+      scopedItems = items.filter((item) => {
+        const posId = item.pointOfSales?._id || item.pointOfSales;
+        return String(posId) === workplaceKey;
+      });
+      scopedOrders = orders.filter((order) => {
+        const posId = order.pointOfSales?._id || order.pointOfSales;
+        return String(posId) === workplaceKey;
+      });
+    }
+
     const result = await getWarehouseSuggestions({
-      items,
-      orders,
+      items: scopedItems,
+      orders: scopedOrders,
       lang: req.body?.lang === "en" ? "en" : "it",
     });
     return res

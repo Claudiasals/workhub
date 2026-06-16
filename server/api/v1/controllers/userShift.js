@@ -2,15 +2,54 @@ import Joi from "joi";
 import { handleRouteErrors } from "../../../utils/error.js";
 import { formatResponse } from "../../../utils/format.js";
 import UserShiftModel from "../../../db/models/UserShift.js";
+import UserModel from "../../../db/models/User.js";
+import { SHIFT_PERIOD_KEYS } from "../../../utils/shiftPeriods.js";
+
+const shiftPopulate = {
+  path: "user",
+  select: "firstName lastName email personnelNumber department workplace",
+};
+
+// Get shift documents for users at the requester's workplace
+export const getWorkplaceShifts = async (req, res) => {
+  try {
+    const workplaceId = req.user?.workplace?._id || req.user?.workplace;
+    const isAdmin = req.user?.role === "admin";
+
+    let userFilter = { isActive: { $ne: false } };
+
+    if (workplaceId) {
+      userFilter.workplace = workplaceId;
+    } else if (!isAdmin) {
+      userFilter._id = req.user._id;
+    }
+
+    const users = await UserModel.find(userFilter).select("_id").lean();
+    const userIds = users.map((user) => user._id);
+
+    if (userIds.length === 0) {
+      return res
+        .status(200)
+        .json(formatResponse([], true, "Workplace shifts retrieved"));
+    }
+
+    const shifts = await UserShiftModel.find({ user: { $in: userIds } })
+      .populate(shiftPopulate)
+      .lean();
+
+    return res
+      .status(200)
+      .json(formatResponse(shifts, true, "Workplace shifts retrieved"));
+  } catch (error) {
+    return handleRouteErrors(res, { error });
+  }
+};
 
 // Get all shift documents (admin)
 export const getAllShifts = async (req, res) => {
   try {
     const shifts = await UserShiftModel.find()
-      .populate({
-        path: "user",
-        select: "firstName lastName email personnelNumber department workplace",
-      })
+      .populate(shiftPopulate)
       .lean();
 
     return res
@@ -71,7 +110,7 @@ export const updateShift = async (req, res) => {
         "saturday"
       )
       .required(),
-    period: Joi.string().valid("morning", "afternoon").required(),
+    period: Joi.string().valid(...SHIFT_PERIOD_KEYS).required(),
     value: Joi.boolean().required(),
   });
 
@@ -85,11 +124,19 @@ export const updateShift = async (req, res) => {
     }
 
     const { day, period, value: boolValue } = value;
-    const path = `shifts.${day}.${period}`;
+    const update = { [`shifts.${day}.${period}`]: boolValue };
+
+    if (boolValue) {
+      SHIFT_PERIOD_KEYS.forEach((slot) => {
+        if (slot !== period) {
+          update[`shifts.${day}.${slot}`] = false;
+        }
+      });
+    }
 
     const updated = await UserShiftModel.findByIdAndUpdate(
       id,
-      { $set: { [path]: boolValue } },
+      { $set: update },
       { new: true, runValidators: true }
     ).lean();
 

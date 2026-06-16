@@ -68,3 +68,38 @@ export function generatePromoEmailLocal({ customer, promotion, lang = "it" }) {
     source: "heuristic",
   };
 }
+
+/** Testo formattato da mostrare al cliente in negozio (modal / cassa). */
+export function buildPromoDisplayForCustomer({ customer, promotion, t, lang = "it" }) {
+  const name =
+    `${customer?.firstName || ""} ${customer?.lastName || ""}`.trim() ||
+    (lang === "en" ? "Customer" : "Cliente");
+  const discount = promotion?.discountPercent || 10;
+  const product = promotion?.productName || (lang === "en" ? "selected products" : "prodotti selezionati");
+  const validDays = promotion?.validDays || 7;
+  const validUntil = new Date();
+  validUntil.setDate(validUntil.getDate() + validDays);
+  const dateStr = validUntil.toLocaleDateString(lang === "en" ? "en-GB" : "it-IT");
+  const onLabel = t("customerAiOn");
+  const validLabel = t("customerAiValidDays").replace("{days}", String(validDays));
+
+  const lines = [
+    `🎯 ${t("customerAiRecommendedPromo")}: ${discount}% ${onLabel} ${product}`,
+    `${validLabel} (${lang === "en" ? "until" : "fino al"} ${dateStr})`,
+    "",
+    promotion?.motivation || "",
+  ];
+
+  if (promotion?.recentProducts?.length) {
+    lines.push("", lang === "en" ? "Recent purchases:" : "Acquisti recenti:");
+    promotion.recentProducts.forEach((item) => lines.push(`• ${item}`));
+  }
+
+  lines.push("", `— ${name}`);
+
+  return {
+    title: t("customerAiPromoShowTitle"),
+    body: lines.join("\n").trim(),
+    clipboardText: `${discount}% ${onLabel} ${product}\n${promotion?.motivation || ""}`,
+  };
+}

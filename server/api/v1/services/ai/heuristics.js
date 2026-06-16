@@ -2,6 +2,12 @@
  * Rule-based fallbacks when no LLM API key is configured (demo / portfolio mode).
  */
 
+import {
+  SHIFT_PERIOD_KEYS,
+  WORKDAY_KEYS,
+  getDaySlots,
+} from "../../../../utils/shiftPeriods.js";
+
 const TICKET_RULES = [
   { re: /pc|computer|accesso|login|software|rete|server|bug|errore/i, category: "tecnico", priority: "alta" },
   { re: /magazzino|giacenza|stock|scaffale|inventario|carico|scarico/i, category: "magazzino", priority: "media" },
@@ -38,11 +44,19 @@ export function classifyTicketHeuristic(title = "", description = "") {
   };
 }
 
+function getItemStock(item) {
+  if (item.stock != null && typeof item.stock === "object") {
+    const values = Object.values(item.stock);
+    return Math.min(...values.map((value) => Number(value) || 0));
+  }
+  return Number(item.stock ?? 0);
+}
+
 export function warehouseSuggestionsHeuristic(items = [], orders = []) {
   const suggestions = [];
 
   items.forEach((item) => {
-    const stock = Number(item.stock ?? 0);
+    const stock = getItemStock(item);
     const limit = Number(item.stockLimit ?? 0);
     const productName = item.product?.name || item.productName || "Prodotto";
     const location = item.pointOfSales?.name || item.locationName || "Sede";
@@ -74,8 +88,8 @@ export function warehouseSuggestionsHeuristic(items = [], orders = []) {
   });
 
   byProduct.forEach((rows, sku) => {
-    const low = rows.filter((r) => Number(r.stock ?? 0) <= Number(r.stockLimit ?? 0));
-    const high = rows.filter((r) => Number(r.stock ?? 0) > Number(r.stockLimit ?? 0) * 3);
+    const low = rows.filter((r) => getItemStock(r) <= Number(r.stockLimit ?? 0));
+    const high = rows.filter((r) => getItemStock(r) > Number(r.stockLimit ?? 0) * 3);
     if (low.length && high.length) {
       const from = high[0];
       const to = low[0];
@@ -117,37 +131,42 @@ export function warehouseSuggestionsHeuristic(items = [], orders = []) {
   return { suggestions };
 }
 
-const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-
 export function analyzeShiftsHeuristic(shifts = [], leaves = [], users = []) {
   const alerts = [];
   const coverage = {};
+  const periodLabels = {
+    early: "07-13",
+    mid: "12-18",
+    late: "17-22",
+  };
 
-  WEEKDAYS.forEach((day) => {
-    coverage[day] = { morning: 0, afternoon: 0 };
+  WORKDAY_KEYS.forEach((day) => {
+    coverage[day] = { early: 0, mid: 0, late: 0 };
   });
 
   shifts.forEach((shiftDoc) => {
-    Object.entries(shiftDoc.shifts || {}).forEach(([day, slots]) => {
+    Object.entries(shiftDoc.shifts || {}).forEach(([day, rawSlots]) => {
       if (!coverage[day]) return;
-      if (slots?.morning) coverage[day].morning += 1;
-      if (slots?.afternoon) coverage[day].afternoon += 1;
+      const slots = getDaySlots(rawSlots);
+      SHIFT_PERIOD_KEYS.forEach((period) => {
+        if (slots[period]) coverage[day][period] += 1;
+      });
     });
   });
 
-  WEEKDAYS.forEach((day) => {
-    ["morning", "afternoon"].forEach((period) => {
+  WORKDAY_KEYS.forEach((day) => {
+    SHIFT_PERIOD_KEYS.forEach((period) => {
       if (coverage[day][period] === 0) {
         alerts.push({
           type: "gap",
           severity: "high",
-          message: `Fascia scoperta: ${day} (${period === "morning" ? "mattina" : "pomeriggio"}) senza turni assegnati.`,
+          message: `Fascia scoperta: ${day} (${periodLabels[period]}) senza turni assegnati.`,
         });
       } else if (coverage[day][period] >= 4) {
         alerts.push({
           type: "overload",
           severity: "medium",
-          message: `Possibile sovraccarico: ${day} ${period} con ${coverage[day][period]} dipendenti in turno.`,
+          message: `Possibile sovraccarico: ${day} ${periodLabels[period]} con ${coverage[day][period]} dipendenti in turno.`,
         });
       }
     });
@@ -171,9 +190,11 @@ export function analyzeShiftsHeuristic(shifts = [], leaves = [], users = []) {
 
   const shiftCounts = shifts.map((s) => {
     let count = 0;
-    Object.values(s.shifts || {}).forEach((slots) => {
-      if (slots?.morning) count += 1;
-      if (slots?.afternoon) count += 1;
+    Object.values(s.shifts || {}).forEach((rawSlots) => {
+      const slots = getDaySlots(rawSlots);
+      SHIFT_PERIOD_KEYS.forEach((period) => {
+        if (slots[period]) count += 1;
+      });
     });
     return count;
   });

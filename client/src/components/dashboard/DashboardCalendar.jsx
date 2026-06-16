@@ -26,24 +26,30 @@ import { fetchUsersAsync } from "../../store/feature/userSlice";
 import {
   fetchAllShiftsAsync,
   fetchUserShiftsAsync,
+  fetchWorkplaceShiftsAsync,
 } from "../../store/feature/shiftsSlice";
 import { generateCommunicationRequest } from "../../api/aiApi";
 import { AiBadge } from "../ai/AiInsightPanel";
 import ShiftQuickManageDrawer from "./ShiftQuickManageDrawer";
-import ShiftAiInsightsPanel from "./ShiftAiInsightsPanel";
 import {
   buildShiftCalendarEvents,
+  filterShiftsByWorkplace,
   getVisibleRange,
+  getWorkplaceId,
   SHIFT_HOURS,
   getShiftPeriodStyle,
   getCompanyEventStyle,
+  resolveCompanyEventKind,
 } from "../../utils/shiftsCalendar";
+import { SHIFT_PERIOD_KEYS, getShiftPeriodLabel } from "../../utils/shiftPeriods";
 import {
   buildDemoCompanyEvents,
   buildDemoShiftEvents,
   filterEventsInRange,
   isRangeOverlappingCurrentWeek,
 } from "../../utils/calendarDemo";
+
+const CALENDAR_HEIGHT = 580;
 
 const locales = { it, en: enGB };
 
@@ -86,11 +92,16 @@ function parseEventFields(ev) {
     location: "Tutte le sedi",
     department: "Aziendale",
     audience: "Team",
+    kind: null,
     text: desc,
   };
   const metaLines = [];
   lines.forEach((line) => {
-    if (line.startsWith("Sede: ")) meta.location = line.replace("Sede: ", "");
+    if (line.startsWith("Tipo: ")) {
+      const tipo = line.replace("Tipo: ", "").trim().toLowerCase();
+      if (tipo === "riunione") meta.kind = "meeting";
+      else if (tipo === "evento") meta.kind = "event";
+    } else if (line.startsWith("Sede: ")) meta.location = line.replace("Sede: ", "");
     else if (line.startsWith("Reparto: "))
       meta.department = line.replace("Reparto: ", "");
     else if (line.startsWith("Destinatari: "))
@@ -101,20 +112,23 @@ function parseEventFields(ev) {
   return meta;
 }
 
-const CustomToolbar = ({ label, view, onView, onNavigate }) => {
+const CustomToolbar = ({
+  label,
+  view,
+  onView,
+  onNavigate,
+  showShiftScopeToggle = false,
+  shiftScopeToggleLabel,
+  onShiftScopeToggle,
+}) => {
   const { t } = useLanguage();
   return (
     <div className="calendar-toolbar w-full">
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => onNavigate("PREV")} className="calendar-btn">
-          ‹
-        </button>
-        <button type="button" onClick={() => onNavigate("NEXT")} className="calendar-btn">
-          ›
-        </button>
-      </div>
-      <span className="text-xl font-extrabold">{label}</span>
-      <div className="flex items-center gap-2">
+      <span className="calendar-toolbar__period text-xl font-extrabold">
+        {label}
+      </span>
+
+      <div className="calendar-toolbar__views">
         {["month", "week", "day"].map((v) => (
           <button
             key={v}
@@ -125,6 +139,27 @@ const CustomToolbar = ({ label, view, onView, onNavigate }) => {
             {v === "month" ? t("mese") : v === "week" ? t("settimana") : t("giorno")}
           </button>
         ))}
+      </div>
+
+      <div className="calendar-toolbar__end">
+        {showShiftScopeToggle && (
+          <button
+            type="button"
+            onClick={onShiftScopeToggle}
+            className="calendar-view-btn active calendar-toolbar__scope"
+          >
+            {shiftScopeToggleLabel}
+          </button>
+        )}
+
+        <div className="calendar-toolbar__nav">
+          <button type="button" onClick={() => onNavigate("PREV")} className="calendar-btn">
+            ‹
+          </button>
+          <button type="button" onClick={() => onNavigate("NEXT")} className="calendar-btn">
+            ›
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -140,9 +175,13 @@ export function DashboardCalendar({ canManage = false }) {
   const eventsData = useSelector((s) => s.events.events);
   const users = useSelector((s) => s.users.list) || [];
   const shifts = useSelector((s) => s.shifts.list) || [];
+  const workplaceShifts = useSelector((s) => s.shifts.workplaceList) || [];
   const userShifts = useSelector((s) => s.shifts.current);
 
+  const userWorkplaceId = getWorkplaceId(authUser);
+
   const [mode, setMode] = useState("shifts");
+  const [shiftScope, setShiftScope] = useState(canManage ? "workplace" : "mine");
   const [view, setView] = useState("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedItem, setSelectedItem] = useState(null);
@@ -150,7 +189,6 @@ export function DashboardCalendar({ canManage = false }) {
   const [formData, setFormData] = useState(emptyForm());
   const [eventToDelete, setEventToDelete] = useState(null);
   const [manageOpen, setManageOpen] = useState(false);
-  const [shiftAiRequest, setShiftAiRequest] = useState(0);
   const [aiKeywords, setAiKeywords] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState(null);
@@ -161,13 +199,20 @@ export function DashboardCalendar({ canManage = false }) {
   useEffect(() => {
     if (!token) return;
     dispatch(fetchEventsAsync({ token }));
+    if (authUser?._id) {
+      dispatch(fetchUserShiftsAsync({ userId: authUser._id, token }));
+    }
+    dispatch(fetchWorkplaceShiftsAsync({ token }));
     if (canManage) {
       dispatch(fetchUsersAsync(token));
       dispatch(fetchAllShiftsAsync({ token }));
-    } else if (authUser?._id) {
-      dispatch(fetchUserShiftsAsync({ userId: authUser._id, token }));
     }
   }, [dispatch, token, canManage, authUser?._id]);
+
+  const scopedWorkplaceShifts = useMemo(() => {
+    const source = canManage ? shifts : workplaceShifts;
+    return filterShiftsByWorkplace(source, userWorkplaceId);
+  }, [canManage, shifts, workplaceShifts, userWorkplaceId]);
 
   const companyEvents = useMemo(() => {
     const { start, end } = getVisibleRange(currentDate, view, lang);
@@ -186,6 +231,11 @@ export function DashboardCalendar({ canManage = false }) {
         department: meta.department,
         description: meta.text,
         audience: meta.audience,
+        eventKind: resolveCompanyEventKind({
+          title: ev.title,
+          description: ev.description,
+          kind: meta.kind,
+        }),
         isDb: true,
         isDemo: false,
         isShift: false,
@@ -203,21 +253,35 @@ export function DashboardCalendar({ canManage = false }) {
     const realEvents = buildShiftCalendarEvents({
       rangeStart: start,
       rangeEnd: end,
-      shifts,
+      shifts: scopedWorkplaceShifts,
       users,
-      canManage,
+      scope: shiftScope,
       userShifts,
       authUser,
     });
 
     if (realEvents.length > 0) return realEvents;
 
-    if (isRangeOverlappingCurrentWeek(start, end, lang)) {
+    const hasShiftData =
+      shiftScope === "mine"
+        ? Boolean(userShifts?.shifts)
+        : scopedWorkplaceShifts.length > 0;
+
+    if (!hasShiftData && isRangeOverlappingCurrentWeek(start, end, lang)) {
       return buildDemoShiftEvents(lang);
     }
 
     return realEvents;
-  }, [currentDate, view, lang, shifts, users, canManage, userShifts, authUser]);
+  }, [
+    currentDate,
+    view,
+    lang,
+    scopedWorkplaceShifts,
+    users,
+    shiftScope,
+    userShifts,
+    authUser,
+  ]);
 
   const calendarEvents = mode === "shifts" ? shiftEvents : companyEvents;
 
@@ -301,7 +365,7 @@ export function DashboardCalendar({ canManage = false }) {
   const eventPropGetter = (event) => {
     const { backgroundColor, color } = event.isShift
       ? getShiftPeriodStyle(event.period)
-      : getCompanyEventStyle();
+      : getCompanyEventStyle(event.eventKind || "event");
 
     return {
       style: {
@@ -341,12 +405,12 @@ export function DashboardCalendar({ canManage = false }) {
       <section
         className={`app-surface company-events-calendar dashboard-calendar-card p-4 min-w-0 w-full ${textColor}`}
       >
-        <div className="dashboard-card-header dashboard-calendar-header flex items-center gap-3 mb-3">
+        <div className="dashboard-card-header dashboard-calendar-header mb-3">
           <CalendarIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
 
-          <div className="dashboard-calendar-header__title-group flex items-center gap-3 min-w-0">
-            <h3 className="text-sm font-bold shrink-0">{headerTitle}</h3>
-            <div className="calendar-mode-toggle flex items-center gap-2 shrink-0">
+          <div className="dashboard-calendar-header__title-group">
+            <h3 className="text-sm font-bold">{headerTitle}</h3>
+            <div className="calendar-mode-toggle">
               <button
                 type="button"
                 onClick={() => switchMode("shifts")}
@@ -364,61 +428,23 @@ export function DashboardCalendar({ canManage = false }) {
             </div>
           </div>
 
-          <div className="dashboard-calendar-header__actions flex items-center gap-2 ml-auto shrink-0">
+          <div className="dashboard-calendar-header__actions">
             {mode === "events" && canManage && (
-              <button type="button" onClick={openCreate} className="custom-button text-sm whitespace-nowrap">
+              <button type="button" onClick={openCreate} className="custom-button text-sm">
                 + {t("companyEventAdd")}
               </button>
             )}
             {mode === "shifts" && canManage && (
-              <>
-                <button
-                  type="button"
-                  className="custom-button-light text-xs whitespace-nowrap"
-                  onClick={() => setShiftAiRequest((n) => n + 1)}
-                >
-                  {t("aiShiftAnalyze")}
-                </button>
-                <button
-                  type="button"
-                  className="custom-button text-xs whitespace-nowrap"
-                  onClick={() => setManageOpen(true)}
-                >
-                  {t("shiftsManageBtn")}
-                </button>
-              </>
+              <button
+                type="button"
+                className="custom-button text-xs"
+                onClick={() => setManageOpen(true)}
+              >
+                {t("shiftsManageBtn")}
+              </button>
             )}
           </div>
         </div>
-
-        {mode === "shifts" && (
-          <p className="text-xs opacity-70 mb-2">{t("shiftsCalendarWeeklyHint")}</p>
-        )}
-
-        {mode === "shifts" && (
-          <div className="calendar-shift-legend mb-3">
-            <span className="calendar-shift-legend__item">
-              <span className="calendar-shift-legend__dot calendar-shift-legend__dot--morning" />
-              {t("shiftMorning")} · {SHIFT_HOURS.morning}
-            </span>
-            <span className="calendar-shift-legend__item">
-              <span className="calendar-shift-legend__dot calendar-shift-legend__dot--afternoon" />
-              {t("shiftAfternoon")} · {SHIFT_HOURS.afternoon}
-            </span>
-          </div>
-        )}
-
-        {mode === "events" && (
-          <p className="text-xs opacity-70 mb-3">{t("eventsCalendarColorHint")}</p>
-        )}
-
-        {mode === "shifts" && canManage && (
-          <ShiftAiInsightsPanel
-            token={token}
-            active={mode === "shifts" && canManage}
-            analyzeRequest={shiftAiRequest}
-          />
-        )}
 
         <div className={`company-events-calendar__body ${theme === "dark" ? "dark" : "light"}`}>
           <Calendar
@@ -433,11 +459,59 @@ export function DashboardCalendar({ canManage = false }) {
             views={["month", "week", "day"]}
             startAccessor="start"
             endAccessor="end"
-            style={{ height: 420 }}
+            style={{ height: CALENDAR_HEIGHT }}
+            scrollToTime={new Date(1970, 1, 1, 7, 30, 0)}
+            min={new Date(1970, 1, 1, 7, 0, 0)}
+            max={new Date(1970, 1, 1, 20, 0, 0)}
             eventPropGetter={eventPropGetter}
             onSelectEvent={handleSelectEvent}
-            components={{ toolbar: CustomToolbar }}
+            components={{
+              toolbar: (toolbarProps) => (
+                <CustomToolbar
+                  {...toolbarProps}
+                  showShiftScopeToggle={mode === "shifts"}
+                  shiftScopeToggleLabel={
+                    shiftScope === "mine"
+                      ? t("calendarShiftScopeWorkplace")
+                      : t("calendarShiftScopeMine")
+                  }
+                  onShiftScopeToggle={() =>
+                    setShiftScope((scope) =>
+                      scope === "mine" ? "workplace" : "mine"
+                    )
+                  }
+                />
+              ),
+            }}
           />
+
+          {mode === "shifts" && (
+            <div className="calendar-shift-legend calendar-shift-legend--below">
+              {SHIFT_PERIOD_KEYS.map((period) => (
+                <span key={period} className="calendar-shift-legend__item">
+                  <span
+                    className={`calendar-shift-legend__dot calendar-shift-legend__dot--${period}`}
+                  />
+                  {getShiftPeriodLabel(period, t)} · {SHIFT_HOURS[period]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {mode === "events" && (
+            <div className="calendar-shift-legend calendar-shift-legend--below">
+              <span className="calendar-shift-legend__item">
+                <span className="calendar-shift-legend__dot calendar-shift-legend__dot--meeting" />
+                {t("companyEventKindMeeting")}
+              </span>
+              <span className="calendar-shift-legend__item">
+                <span
+                  className="calendar-shift-legend__dot calendar-shift-legend__dot--company-event"
+                />
+                {t("companyEventKindEvent")}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -454,7 +528,7 @@ export function DashboardCalendar({ canManage = false }) {
             </p>
             <p className="flex items-center gap-2">
               <ClockIcon size={16} />
-              {selectedItem.period === "morning" ? t("shiftMorning") : t("shiftAfternoon")} ·{" "}
+              {getShiftPeriodLabel(selectedItem.period, t)} ·{" "}
               {SHIFT_HOURS[selectedItem.period]}
             </p>
             {selectedItem.department && (

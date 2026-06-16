@@ -205,7 +205,7 @@ export function BusinessOverviewPanel({
             type="button"
             onClick={onRefresh}
             disabled={loading}
-            className="custom-button shrink-0 whitespace-nowrap text-sm"
+            className="custom-button text-sm"
           >
             {t("aiRefresh")}
           </button>

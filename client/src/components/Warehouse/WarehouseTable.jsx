@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNavigate } from "react-router-dom";
 import DrawerSede from "../Warehouse/DrawerSede.jsx";
@@ -10,6 +10,7 @@ import {
   toggleSortAZ,
   toggleLowStockFilter,
 } from "../../store/feature/warehouseFiltersSlice";
+import { getWorkplaceId } from "../../utils/shiftsCalendar";
 
 const getItemStock = (item) =>
   Number(item.stock?.["Mia Sede"] ?? item.stock ?? 0);
@@ -44,9 +45,17 @@ const WarehouseTable = ({ data, allItems, columns }) => {
   );
 
   // Logged user's workplace ID
-  const userWorkplaceId = useSelector(
-    (state) => state.auth.user?.workplace?._id
-  );
+  const authUser = useSelector((state) => state.auth.user);
+  const userWorkplaceId = getWorkplaceId(authUser);
+
+  const allCategoriesLabel = t("tutteCategorie");
+  const activeCategory = selectedCategory || allCategoriesLabel;
+
+  useEffect(() => {
+    if (selectedCategory == null || selectedCategory === "All categories") {
+      dispatch(setSelectedCategory(allCategoriesLabel));
+    }
+  }, [selectedCategory, allCategoriesLabel, dispatch]);
 
   // Drawer visibility state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -102,8 +111,8 @@ const WarehouseTable = ({ data, allItems, columns }) => {
       );
     }
 
-    if (selectedCategory !== t("tutteCategorie")) {
-      const selectedCategoryId = categoryMap.get(selectedCategory);
+    if (activeCategory !== allCategoriesLabel) {
+      const selectedCategoryId = categoryMap.get(activeCategory);
       if (selectedCategoryId) {
         result = result.filter(
           (p) =>
@@ -129,11 +138,11 @@ const WarehouseTable = ({ data, allItems, columns }) => {
   }, [
     data,
     searchTerm,
-    selectedCategory,
+    activeCategory,
     sortAZ,
     lowStockFilter,
     categoryMap,
-    t,
+    allCategoriesLabel,
   ]);
 
   return (
@@ -152,7 +161,7 @@ const WarehouseTable = ({ data, allItems, columns }) => {
           </button>
 
           <select
-            value={selectedCategory}
+            value={activeCategory}
             onChange={(e) =>
               dispatch(setSelectedCategory(e.target.value))
             }
@@ -243,6 +252,22 @@ const WarehouseTable = ({ data, allItems, columns }) => {
                       >
                         {text}
                       </span>
+                    </td>
+                  );
+                }
+
+                if (col === "stock") {
+                  return (
+                    <td key={j}>
+                      {getItemStock(row)}
+                    </td>
+                  );
+                }
+
+                if (col === "stockLimit") {
+                  return (
+                    <td key={j}>
+                      {getItemStockLimit(row)}
                     </td>
                   );
                 }

@@ -4,11 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import AppFeedbackModal from "../../components/AppFeedbackModal";
 import Drawer from "../../components/Drawer";
 import {
-  TicketClassificationCard,
-  AiButtonLabel,
-} from "../../components/ai/AiInsightPanel";
-import { classifyTicketRequest } from "../../api/aiApi";
-import {
   createTicketAsync,
   fetchTickets,
   selectTickets,
@@ -49,9 +44,6 @@ const TicketCreator = ({ user }) => {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [aiClassification, setAiClassification] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -84,49 +76,6 @@ const TicketCreator = ({ user }) => {
     return getDemoUserTickets(authUser);
   }, [filteredTickets, creatorStatus, authUser]);
 
-  const getToken = () => {
-    try {
-      const raw = sessionStorage.getItem("auth");
-      return raw ? JSON.parse(raw)?.token : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const runTicketClassification = async (ticketTitle, ticketDescription) => {
-    const token = getToken();
-    if (!token) throw new Error(t("tokenNonDisponibileEffettuaLogin"));
-
-    return classifyTicketRequest({
-      token,
-      title: ticketTitle,
-      description: ticketDescription,
-    });
-  };
-
-  const handleClassifyTicket = async () => {
-    const trimmedTitle = title.trim();
-    const trimmedDescription = description.trim();
-
-    if (trimmedTitle.length < 3 || trimmedDescription.length < 3) {
-      setAiError(t("titoloMinimo"));
-      return;
-    }
-
-    setAiLoading(true);
-    setAiError("");
-
-    try {
-      const result = await runTicketClassification(trimmedTitle, trimmedDescription);
-      setAiClassification(result);
-    } catch (err) {
-      setAiError(err.message || t("aiError"));
-      setAiClassification(null);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleCreateTicket = async () => {
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
@@ -154,27 +103,17 @@ const TicketCreator = ({ user }) => {
     setSuccess("");
 
     try {
-      let classification = aiClassification;
-      if (!classification) {
-        setAiLoading(true);
-        classification = await runTicketClassification(trimmedTitle, trimmedDescription);
-        setAiClassification(classification);
-        setAiLoading(false);
-      }
-
       const payload = {
         user: resolvedUserId,
         name: trimmedTitle,
         content: trimmedDescription,
         status: "open",
-        aiClassification: classification,
       };
 
       const result = await dispatch(createTicketAsync(payload)).unwrap();
 
       setTitle("");
       setDescription("");
-      setAiClassification(null);
       setSuccess(`"${result.name}"`);
       setTicketDrawerOpen(false);
       dispatch(fetchTickets());
@@ -191,7 +130,6 @@ const TicketCreator = ({ user }) => {
       console.error("Ticket creation error:", err);
     } finally {
       setIsLoading(false);
-      setAiLoading(false);
     }
   };
 
@@ -226,10 +164,8 @@ const TicketCreator = ({ user }) => {
 
   const openCreateDrawer = () => {
     setError("");
-    setAiError("");
     setTitle("");
     setDescription("");
-    setAiClassification(null);
     setTicketDrawerOpen(true);
   };
 
@@ -292,7 +228,7 @@ const TicketCreator = ({ user }) => {
               placeholder={t("cerca")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="table-search !w-auto min-w-0 max-w-[15rem]"
+              className="table-search w-full min-w-0"
             />
           </div>
 
@@ -314,21 +250,17 @@ const TicketCreator = ({ user }) => {
         )}
 
         <div className="ticket-page-list">
-          {searchedTickets.length === 0 ? (
-            <p className="text-sm opacity-70">{t("nessunTicket")}</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <section className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold">{t("aperti")}</h4>
-                {renderTicketList(openTickets, t("nessunTicketAperto"))}
-              </section>
-
-              <section className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold">{t("chiusi")}</h4>
-                {renderTicketList(closedTickets, t("nessunTicketChiuso"))}
-              </section>
+          <div className="ticket-user-columns">
+            <div className="ticket-user-column">
+              <h4 className="ticket-user-column__title">{t("chiusi")}</h4>
+              {renderTicketList(closedTickets, t("nessunTicketChiuso"))}
             </div>
-          )}
+
+            <div className="ticket-user-column">
+              <h4 className="ticket-user-column__title">{t("aperti")}</h4>
+              {renderTicketList(openTickets, t("nessunTicketAperto"))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -351,7 +283,7 @@ const TicketCreator = ({ user }) => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t("titoloTicket")}
-            disabled={isLoading || aiLoading}
+            disabled={isLoading}
             maxLength={100}
             className="drawer-search"
           />
@@ -363,38 +295,13 @@ const TicketCreator = ({ user }) => {
           <label className="drawer-label">{t("aiDescriptionTicket")}</label>
           <textarea
             value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              setAiClassification(null);
-            }}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder={t("aiDescriptionTicket")}
-            disabled={isLoading || aiLoading}
+            disabled={isLoading}
             maxLength={1000}
             rows={4}
             className="drawer-search min-h-[96px] resize-y"
           />
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleClassifyTicket}
-              disabled={isLoading || aiLoading || title.trim().length < 3 || description.trim().length < 3}
-              className="custom-button-light text-sm"
-            >
-              <AiButtonLabel loading={aiLoading}>{t("aiClassifyTicket")}</AiButtonLabel>
-            </button>
-          </div>
-
-          {aiError && (
-            <p className="text-sm text-red-500">{aiError}</p>
-          )}
-
-          {aiClassification && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold opacity-80">{t("aiTicketInsights")}</p>
-              <TicketClassificationCard classification={aiClassification} />
-            </div>
-          )}
 
           {error && (
             <div className="p-2 rounded-xl bg-red-500 text-white text-sm flex justify-between">
@@ -416,7 +323,7 @@ const TicketCreator = ({ user }) => {
 
             <button
               type="submit"
-              disabled={isLoading || aiLoading || !title.trim() || !description.trim()}
+              disabled={isLoading || !title.trim() || !description.trim()}
               className="custom-button disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? t("creando") : t("apriTicket")}

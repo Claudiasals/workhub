@@ -104,7 +104,7 @@ export const AiInsightPanel = ({
         compact ? "gap-2 p-3" : "gap-3 p-4"
       }${fillHeight ? " ai-insight-panel--fill" : ""}${className ? ` ${className}` : ""}`}
     >
-      <div className="dashboard-card-header flex items-center gap-3 min-w-0 w-full shrink-0">
+      <div className="dashboard-card-header w-full shrink-0">
         <SparkleIcon
           size={24}
           weight="duotone"
@@ -121,7 +121,7 @@ export const AiInsightPanel = ({
                 type="button"
                 onClick={onRefresh}
                 disabled={loading}
-                className="custom-button shrink-0 whitespace-nowrap text-[14px]"
+                className="custom-button text-[14px]"
               >
                 {refreshLabel || t("aiRefresh")}
               </button>
@@ -130,7 +130,7 @@ export const AiInsightPanel = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="custom-button shrink-0 whitespace-nowrap text-[14px]"
+                className="custom-button text-[14px]"
               >
                 {t("chiudi")}
               </button>
