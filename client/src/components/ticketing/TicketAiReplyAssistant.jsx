@@ -122,6 +122,9 @@ export function TicketAiReplyAssistant({
     setError("");
     setSuccess("");
 
+    const shouldCloseTicket = !keepTicketOpen;
+    const nextStatus = keepTicketOpen ? "open" : "closed";
+
     try {
       const ok = await persistReply({ closeAfterSend: true });
       if (!ok) return;
@@ -130,7 +133,8 @@ export function TicketAiReplyAssistant({
       onReplySent?.({
         ticketId,
         keepOpen: keepTicketOpen,
-        closed: !keepTicketOpen,
+        closed: shouldCloseTicket,
+        status: nextStatus,
       });
     } catch (err) {
       setError(

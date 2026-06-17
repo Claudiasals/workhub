@@ -397,7 +397,7 @@ export const it = {
 	aiTicketReplyBody: "Messaggio risposta",
 	aiTicketReplySave: "Salva messaggio",
 	aiTicketReplySend: "Invia risposta",
-	aiTicketReplyKeepOpen: "Lascia aperto il ticket",
+	aiTicketReplyKeepOpen: "Lascia aperto",
 	aiTicketReplySaved: "Messaggio salvato sul ticket.",
 	aiTicketReplySent: "Risposta inviata al dipendente.",
 	aiTicketReplySaveError: "Impossibile salvare il messaggio.",

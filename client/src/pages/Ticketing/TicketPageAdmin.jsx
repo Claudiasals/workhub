@@ -832,10 +832,30 @@ const TicketPageAdmin = () => {
                         }));
                       }
                     }}
-                    onReplySent={({ closed }) => {
+                    onReplySent={({ closed, ticketId, status }) => {
+                      if (ticketId && status) {
+                        const statusKey = status === "closed" ? "chiuso" : "aperto";
+
+                        setTicketStatus((prev) => ({
+                          ...prev,
+                          [ticketId]: statusKey,
+                        }));
+
+                        if (isDemoMode) {
+                          setDemoOverrides((prev) => ({
+                            ...prev,
+                            [ticketId]: {
+                              ...prev[ticketId],
+                              status,
+                            },
+                          }));
+                        }
+                      }
+
                       if (!isDemoMode) {
                         dispatch(fetchTickets());
                       }
+
                       if (closed) {
                         setDrawerOpen(false);
                         setSelectedTicket(null);
