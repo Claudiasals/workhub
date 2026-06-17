@@ -455,101 +455,101 @@ export function DashboardCalendar({ canManage = false }) {
     setSelectedItem(event);
   };
 
-  const headerTitle =
-    mode === "shifts" ? t("turniSettimanali") : t("companyCalendarTitle");
-
   return (
     <>
       <section
         className={`app-surface company-events-calendar dashboard-calendar-card p-4 min-w-0 w-full ${textColor}`}
       >
         <div className="dashboard-card-header dashboard-calendar-header mb-3">
-          <div className="dashboard-calendar-header__title-group">
-            <div className="panel-header-leading panel-header-leading--single">
+          <div className="dashboard-calendar-header__top">
+            <div className="dashboard-calendar-header__leading">
               <CalendarIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
-              <h3 className="text-sm font-bold">{headerTitle}</h3>
+              <h3 className="text-sm font-bold">{t("calendario")}</h3>
             </div>
-            <div className="calendar-mode-toggle">
+
+            <div className="dashboard-calendar-header__actions">
+              {mode === "events" && canManage && (
+                <button type="button" onClick={openCreate} className="custom-button text-sm">
+                  + {t("companyEventAdd")}
+                </button>
+              )}
+              {mode === "shifts" && canManage && (
+                <button
+                  type="button"
+                  className="custom-button text-xs"
+                  onClick={() => setManageOpen(true)}
+                >
+                  {t("shiftsManageBtn")}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="dashboard-calendar-toolbar">
+            <div className="dashboard-calendar-toolbar__mode">
               <button
                 type="button"
                 onClick={() => switchMode("shifts")}
-                className={`calendar-mode-btn calendar-mode-btn--shifts${mode === "shifts" ? " is-active" : ""}`}
+                className={`calendar-view-btn${mode === "shifts" ? " active" : ""}`}
               >
-                {t("calendarModeShifts")}
+                {t("turni")}
               </button>
               <button
                 type="button"
                 onClick={() => switchMode("events")}
-                className={`calendar-mode-btn calendar-mode-btn--events${mode === "events" ? " is-active" : ""}`}
+                className={`calendar-view-btn${mode === "events" ? " active" : ""}`}
               >
-                {t("calendarModeEvents")}
+                {t("eventi")}
               </button>
             </div>
-          </div>
 
-          <div className="dashboard-calendar-header__actions">
-            {mode === "events" && canManage && (
-              <button type="button" onClick={openCreate} className="custom-button text-sm">
-                + {t("companyEventAdd")}
-              </button>
-            )}
-            {mode === "shifts" && canManage && (
-              <button
-                type="button"
-                className="custom-button text-xs"
-                onClick={() => setManageOpen(true)}
-              >
-                {t("shiftsManageBtn")}
-              </button>
+            {mode === "shifts" && (
+              <div className="dashboard-calendar-toolbar__departments">
+                {departments.map((dept) => {
+                  const active = selectedDepartments.includes(dept);
+                  const color = departmentColorMap[dept] || "#475569";
+
+                  return (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() =>
+                        setSelectedDepartments((prev) =>
+                          prev.includes(dept)
+                            ? prev.filter((d) => d !== dept)
+                            : [...prev, dept],
+                        )
+                      }
+                      className={`dept-filter ${active ? "active text-white" : "text-[#090c64] bg-white/70"}`}
+                      style={{ backgroundColor: active ? color : undefined }}
+                    >
+                      <span
+                        className={`w-3 h-3 rounded flex items-center justify-center text-[10px] font-bold ${
+                          active ? "bg-white text-black" : "border border-current"
+                        }`}
+                      >
+                        {active ? "✓" : ""}
+                      </span>
+                      {getCalendarDepartmentLabel(dept)}
+                      <span
+                        className="w-2.5 h-2.5 rounded-xl"
+                        style={{ backgroundColor: color }}
+                      />
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={toggleAllDepartments}
+                  className="custom-button text-[15px] shrink-0"
+                >
+                  {allDepartmentsSelected ? t("deseleziona") : t("seleziona")}
+                </button>
+              </div>
             )}
           </div>
         </div>
-
-        {mode === "shifts" && (
-          <div className="flex flex-nowrap items-center gap-2 mb-3 overflow-x-auto">
-            {departments.map((dept) => {
-              const active = selectedDepartments.includes(dept);
-              const color = departmentColorMap[dept] || "#475569";
-
-              return (
-                <button
-                  key={dept}
-                  type="button"
-                  onClick={() =>
-                    setSelectedDepartments((prev) =>
-                      prev.includes(dept)
-                        ? prev.filter((d) => d !== dept)
-                        : [...prev, dept],
-                    )
-                  }
-                  className={`dept-filter ${active ? "active text-white" : "text-[#090c64] bg-white/70"}`}
-                  style={{ backgroundColor: active ? color : undefined }}
-                >
-                  <span
-                    className={`w-3 h-3 rounded flex items-center justify-center text-[10px] font-bold ${
-                      active ? "bg-white text-black" : "border border-current"
-                    }`}
-                  >
-                    {active ? "✓" : ""}
-                  </span>
-                  {getCalendarDepartmentLabel(dept)}
-                  <span
-                    className="w-2.5 h-2.5 rounded-xl"
-                    style={{ backgroundColor: color }}
-                  />
-                </button>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={toggleAllDepartments}
-              className="custom-button text-[15px] shrink-0"
-            >
-              {allDepartmentsSelected ? t("deseleziona") : t("seleziona")}
-            </button>
-          </div>
-        )}
 
         <div
           className={`company-events-calendar__body calendar-rbc-wrap calendar-rbc-wrap--${view}${mode === "shifts" ? " calendar-rbc-wrap--shifts" : ""} ${theme === "dark" ? "dark" : "light"}`}

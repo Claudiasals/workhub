@@ -111,7 +111,7 @@
   }
   /* Filtri reparto */
   .dept-filter {
-    @apply flex shrink-0 items-center gap-2 px-2.5 py-2 rounded-xl cursor-pointer select-none text-[13px] border shadow-sm transition-all;
+    @apply flex shrink-0 items-center gap-2 px-2.5 py-2 rounded-xl cursor-pointer select-none text-[13px] border-0 shadow-sm transition-all;
     height: 35px;
     font-weight: 600;
     line-height: 1;
@@ -121,7 +121,6 @@
   .dark .dept-filter:not(.active) {
     background: rgba(255,255,255,0.10) !important;
     color: white !important;
-    border-color: rgba(255,255,255,0.25) !important;
   }
 
   .dark .dept-filter.active {

@@ -70,15 +70,16 @@ export function getCalendarDepartmentLabel(department = "") {
 }
 
 export function getShiftEventDepartments(events = []) {
-  const departments = [
+  const fromEvents = [
     ...new Set(events.map((event) => event.department).filter(Boolean)),
   ];
 
-  if (departments.length) {
-    return departments.sort((a, b) => a.localeCompare(b, "it"));
-  }
+  const merged = [...CALENDAR_DEFAULT_DEPARTMENTS];
+  fromEvents.forEach((department) => {
+    if (!merged.includes(department)) merged.push(department);
+  });
 
-  return [...CALENDAR_DEFAULT_DEPARTMENTS];
+  return merged;
 }
 
 export function buildDepartmentColorMap(departments = []) {
