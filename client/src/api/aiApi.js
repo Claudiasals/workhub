@@ -115,6 +115,15 @@ export const fetchBusinessOverviewRequest = async (token) => {
 /** @deprecated use fetchBusinessOverviewRequest */
 export const fetchDashboardInsightsRequest = fetchBusinessOverviewRequest;
 
+export const fetchSalesInsightsRequest = async (token) => {
+  const response = await fetch(`${API_URL}/ai/sales/insights`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({}),
+  });
+  return parseAiResponse(response);
+};
+
 export const fetchCustomerAiInsightsRequest = async ({ token, customerId }) => {
   const response = await fetch(`${API_URL}/ai/customers/insights`, {
     method: "POST",

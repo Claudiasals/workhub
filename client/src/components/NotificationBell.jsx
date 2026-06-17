@@ -101,12 +101,20 @@ const NotificationBell = () => {
     ? createPortal(
         <div
           ref={panelRef}
-          className={`notification-bell-panel app-surface flex flex-col min-w-0 ${textColor}`}
+          className={`notification-bell-panel app-surface flex flex-col min-w-0 p-4 ${textColor}`}
           style={panelStyle}
           role="menu"
         >
-          <div className="notification-bell-panel-header">
-            <strong>{t("notifBellTitle")}</strong>
+          <div className="notification-bell-panel-header dashboard-card-header">
+            <div className="panel-header-leading panel-header-leading--single">
+              <BellIcon
+                size={24}
+                color={iconColor}
+                weight="duotone"
+                className="preserve-icon-size shrink-0"
+              />
+              <h3 className="text-sm font-bold">{t("notifBellTitle")}</h3>
+            </div>
           </div>
 
           {items.length === 0 ? (
@@ -114,32 +122,34 @@ const NotificationBell = () => {
           ) : (
             <ul className="notification-bell-list">
               {items.map((item) => (
-                <li key={item.id} className="notification-bell-item-row">
-                  <button
-                    type="button"
-                    className="notification-bell-item"
-                    onClick={() => handleItemClick(item)}
-                    role="menuitem"
-                  >
-                    <span className="notification-bell-item-title">
-                      {item.title}
-                    </span>
-                    <span className="notification-bell-item-message">
-                      {item.message}
-                    </span>
-                    {item.at && (
-                      <span className="notification-bell-item-time">
-                        {formatWhen(item.at, lang === "en" ? "en-GB" : "it-IT")}
+                <li key={item.id} className="notification-bell-list__item">
+                  <div className="notification-bell-card">
+                    <button
+                      type="button"
+                      className="notification-bell-card__body"
+                      onClick={() => handleItemClick(item)}
+                      role="menuitem"
+                    >
+                      <span className="notification-bell-item-title">
+                        {item.title}
                       </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="notification-bell-mark-one"
-                    onClick={(event) => handleMarkItemRead(event, item)}
-                  >
-                    {t("notifMarkRead")}
-                  </button>
+                      <span className="notification-bell-item-message">
+                        {item.message}
+                      </span>
+                      {item.at && (
+                        <span className="notification-bell-item-time">
+                          {formatWhen(item.at, lang === "en" ? "en-GB" : "it-IT")}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="notification-bell-mark-one"
+                      onClick={(event) => handleMarkItemRead(event, item)}
+                    >
+                      {t("notifMarkRead")}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

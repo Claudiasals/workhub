@@ -6,8 +6,6 @@ import { fetchTicketInsightsRequest } from "../../api/aiApi";
 import {
   ListMagnifyingGlassIcon,
   CalendarDotsIcon,
-  UserListIcon,
-  CircleIcon,
   UserCircleIcon,
 } from "@phosphor-icons/react";
 
@@ -17,7 +15,6 @@ import { addDays } from "date-fns";
 
 import {
   TicketAiLabels,
-  TicketClassificationCard,
 } from "../../components/ai/AiInsightPanel";
 import TicketAiReplyAssistant from "../../components/ticketing/TicketAiReplyAssistant";
 import TicketAssignmentPanel from "../../components/ticketing/TicketAssignmentPanel";
@@ -35,6 +32,8 @@ import {
   sortTicketsByAiPriority,
 } from "../../utils/ticketAiClassification";
 import { analyzeTicketInsightsLocal } from "../../utils/ticketInsightsAnalyzer";
+import { ticketInsightsFingerprint } from "../../utils/aiDataFingerprint";
+import { useAiApiAutoRefresh } from "../../hooks/useAiApiAutoRefresh";
 
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -158,7 +157,6 @@ const TicketPageAdmin = () => {
 
   /* REDUX STATE */
   const tickets = useSelector((state) => state.tickets.tickets) || [];
-  const users = useSelector((state) => state.tickets.users) || [];
   const status = useSelector((state) => state.tickets.status);
   const error = useSelector((state) => state.tickets.error);
   const token = useSelector((state) => state.auth.token);
@@ -173,18 +171,13 @@ const TicketPageAdmin = () => {
         : tickets,
     [isDemoMode, tickets, demoOverrides]
   );
-  const visibleUsers = isDemoMode ? demoUsers : users;
 
   /* LOCAL STATE */
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  const [selectedUser, setSelectedUser] = useState("");
-  const [userSearch, setUserSearch] = useState("");
-
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [selectedAiPriority, setSelectedAiPriority] = useState("");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState("aperto");
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [highlightDate, setHighlightDate] = useState("");
@@ -257,7 +250,7 @@ const TicketPageAdmin = () => {
       const id = ticket._id || ticket.id;
       let s = ticket.status || "open";
       if (s === "open") s = "aperto";
-      if (s === "closed") s = "risolto";
+      if (s === "closed") s = "chiuso";
       map[id] = s;
     });
 
@@ -274,7 +267,7 @@ const TicketPageAdmin = () => {
     });
   }, [visibleTickets]);
 
-  /* FILTERED TICKETS (periodo, utente, stato) */
+  /* FILTERED TICKETS (periodo) */
   const baseFilteredTickets = useMemo(() => {
     const start = dateRange[0]?.startDate;
     const end = dateRange[0]?.endDate;
@@ -283,48 +276,73 @@ const TicketPageAdmin = () => {
       const rawDate = ticket.date || ticket.createdAt || ticket.updatedAt || new Date().toISOString();
       const d = new Date(rawDate);
 
-      const matchDate = (!start || d >= start) && (!end || d <= end);
-
-      const uid = ticket.user?._id || ticket.user?.id || ticket.user;
-      const matchUser = !selectedUser || uid === selectedUser;
-
-      const tid = ticket._id || ticket.id;
-      const matchStatus = !selectedStatus || ticketStatus[tid] === selectedStatus;
-
-      return matchDate && matchUser && matchStatus;
+      return (!start || d >= start) && (!end || d <= end);
     });
-  }, [visibleTickets, dateRange, selectedUser, selectedStatus, ticketStatus]);
+  }, [visibleTickets, dateRange]);
 
   const filteredTickets = useMemo(() => {
-    if (!selectedAiPriority) return baseFilteredTickets;
+    let list = baseFilteredTickets;
 
-    return baseFilteredTickets.filter(
-      (ticket) => getTicketAiPriorityFilter(ticket) === selectedAiPriority
-    );
-  }, [baseFilteredTickets, selectedAiPriority]);
+    list = list.filter((ticket) => {
+      const id = ticket._id || ticket.id;
+      return (ticketStatus[id] || "aperto") === selectedStatusFilter;
+    });
+
+    if (selectedAiPriority) {
+      list = list.filter(
+        (ticket) => getTicketAiPriorityFilter(ticket) === selectedAiPriority
+      );
+    }
+
+    return list;
+  }, [baseFilteredTickets, selectedStatusFilter, selectedAiPriority, ticketStatus]);
 
   const loadTicketInsights = useCallback(async () => {
-    if (status === "idle" || status === "loading") return;
+    if (isDemoMode || !token) return;
+
+    const ticketSource = visibleTickets.length ? visibleTickets : tickets;
+    if (!ticketSource.length && (status === "idle" || status === "loading")) {
+      return;
+    }
 
     setInsightsLoading(true);
     setInsightsError("");
+
     try {
-      if (isDemoMode) {
-        setTicketInsights(analyzeTicketInsightsLocal(demoTickets));
-      } else if (token) {
-        const data = await fetchTicketInsightsRequest(token);
-        setTicketInsights(data);
-      }
-    } catch (err) {
-      setInsightsError(err.message || t("aiError"));
+      const data = await fetchTicketInsightsRequest(token);
+      setTicketInsights(data);
+    } catch {
+      setInsightsError("");
     } finally {
       setInsightsLoading(false);
     }
-  }, [isDemoMode, token, t, status]);
+  }, [isDemoMode, token, status, visibleTickets, tickets]);
+
+  const ticketInsightsFp = useMemo(() => {
+    const ticketSource = isDemoMode
+      ? demoTickets
+      : visibleTickets.length
+        ? visibleTickets
+        : tickets;
+    return ticketInsightsFingerprint(ticketSource);
+  }, [isDemoMode, demoTickets, visibleTickets, tickets]);
+
+  useAiApiAutoRefresh({
+    enabled: !isDemoMode && Boolean(token),
+    dataReady: status !== "loading" && status !== "idle",
+    fingerprint: ticketInsightsFp,
+    onRefresh: loadTicketInsights,
+  });
 
   useEffect(() => {
-    loadTicketInsights();
-  }, [loadTicketInsights]);
+    if (isDemoMode) {
+      setTicketInsights(analyzeTicketInsightsLocal(demoTickets));
+      return;
+    }
+    if (visibleTickets.length) {
+      setTicketInsights(analyzeTicketInsightsLocal(visibleTickets));
+    }
+  }, [isDemoMode, visibleTickets]);
 
   const urgentCount = useMemo(
     () =>
@@ -343,204 +361,61 @@ const TicketPageAdmin = () => {
     return counts;
   }, [baseFilteredTickets]);
 
+  const ticketStatusCounts = useMemo(() => {
+    const counts = { aperto: 0, chiuso: 0 };
+    baseFilteredTickets.forEach((ticket) => {
+      const id = ticket._id || ticket.id;
+      const statusKey = ticketStatus[id] || "aperto";
+      counts[statusKey] = (counts[statusKey] || 0) + 1;
+    });
+    return counts;
+  }, [baseFilteredTickets, ticketStatus]);
+
   const formatDate = (d) =>
     new Date(d).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 
+  const dateRangeLabel = useMemo(() => {
+    const start = dateRange[0]?.startDate;
+    const end = dateRange[0]?.endDate;
+    if (!start || !end) return t("selezionaIntervalloData");
+    return `${formatDate(start)} – ${formatDate(end)}`;
+  }, [dateRange, t]);
+
+  const selectedTicketDetails = useMemo(() => {
+    if (!selectedTicket) return null;
+
+    const ticketId = selectedTicket._id || selectedTicket.id;
+    const ticketStatusValue = ticketStatus[ticketId];
+    const displayClassification = getDisplayAiClassification(selectedTicket);
+
+    return {
+      ticketId,
+      isTicketClosed: ticketStatusValue === "chiuso",
+      statusLabel: ticketStatusValue === "chiuso" ? t("chiuso") : t("aperto"),
+      displayClassification,
+      requesterName: [
+        selectedTicket.user?.nome ||
+          selectedTicket.user?.firstName ||
+          selectedTicket.user?.name ||
+          "",
+        selectedTicket.user?.cognome || selectedTicket.user?.lastName || "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      requesterRole: selectedTicket.user?.ruolo || selectedTicket.user?.role || "",
+      requesterEmail: selectedTicket.user?.email || "",
+      ticketDate: formatDate(
+        selectedTicket.date ||
+          selectedTicket.createdAt ||
+          selectedTicket.updatedAt
+      ),
+      hasAiInsights: hasValidAiClassification(selectedTicket),
+    };
+  }, [selectedTicket, ticketStatus, t]);
+
   /* RENDER */
   return (
-    <div className="flex flex-col gap-4 h-full min-w-0 w-full">
-
-      {/* Barra filtri: periodo, utente, stato */}
-      <nav className="app-surface ticket-admin-filters p-4 min-w-0">
-        <div className="ticket-admin-filters__row">
-          <div className="ticket-admin-filters__title">
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold leading-tight">{t("ticket")}</h1>
-              <p className="ticket-admin-filters__desc">{t("ticketFiltersDesc")}</p>
-            </div>
-          </div>
-
-          <div className="ticket-admin-filters__controls">
-            <button
-              onClick={() => setCalendarOpen(true)}
-              className="custom-button ticket-admin-filters__date-btn"
-              type="button"
-            >
-              <CalendarDotsIcon size={20} weight="duotone" />
-              {t("selezionaIntervalloData")}
-            </button>
-
-            <div className="ticket-admin-filters__search">
-              <UserListIcon
-                size={20}
-                weight="duotone"
-                color={theme === "dark" ? "white" : "#090c64"}
-                className="ticket-admin-filters__search-icon"
-              />
-
-              <input
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder={t("cercaUtente")}
-                className="ticket-user-search !w-full min-w-0"
-              />
-
-              {userSearch && (
-                <button
-                  className="ticket-admin-filters__clear"
-                  onClick={() => {
-                    setUserSearch("");
-                    setSelectedUser("");
-                  }}
-                  type="button"
-                  aria-label={t("annulla")}
-                >
-                  ✕
-                </button>
-              )}
-
-              {userSearch && (
-                <div
-                  className={`ticket-admin-filters__dropdown ${
-                    isDark
-                      ? "bg-[#1a1a2e] text-white border border-white/20"
-                      : "bg-white border border-[#090c64]/10"
-                  }`}
-                >
-                  <div
-                    onClick={() => {
-                      setSelectedUser("");
-                      setUserSearch("");
-                    }}
-                    className={`ticket-admin-filters__dropdown-item border-b ${
-                      isDark
-                        ? "border-white/10 hover:bg-white/10"
-                        : "hover:bg-blue-50"
-                    }`}
-                  >
-                    {t("tuttiUtenti")}
-                  </div>
-
-                  {visibleUsers
-                    .filter((u) => {
-                      const first = u.nome || u.firstName || u.name || "";
-                      const last = u.cognome || u.lastName || "";
-                      const full = `${first} ${last}`.toLowerCase();
-                      return full.includes(userSearch.toLowerCase());
-                    })
-                    .map((u) => {
-                      const userId = u._id || u.id;
-                      const first = u.nome || u.firstName || u.name || "";
-                      const last = u.cognome || u.lastName || "";
-
-                      return (
-                        <div
-                          key={userId}
-                          onClick={() => {
-                            setSelectedUser(userId);
-                            setUserSearch(`${first} ${last}`);
-                          }}
-                          className={`ticket-admin-filters__dropdown-item ${
-                            isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
-                          }`}
-                        >
-                          <UserCircleIcon
-                            size={22}
-                            weight="duotone"
-                            color={theme === "dark" ? "white" : "#090c64"}
-                          />
-                          <span className="text-sm truncate">
-                            {first} {last}
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
-
-            <div className="ticket-admin-filters__status">
-              <CircleIcon
-                size={20}
-                weight="duotone"
-                color={theme === "dark" ? "white" : "#090c64"}
-                className="ticket-admin-filters__status-icon"
-              />
-
-              <button
-                onClick={() => setStatusDropdownOpen((v) => !v)}
-                className={`ticket-admin-filters__status-btn ${
-                  isDark
-                    ? "border-white/25 bg-white/10 text-white"
-                    : "border-gray-300 bg-white/70 text-[#090c64]"
-                }`}
-                type="button"
-              >
-                {selectedStatus === "" && t("tutti")}
-                {selectedStatus === "aperto" && t("aperti")}
-                {selectedStatus === "risolto" && t("risolti")}
-              </button>
-
-              <span className="ticket-admin-filters__status-caret">
-                {statusDropdownOpen ? "▲" : "▼"}
-              </span>
-
-              {statusDropdownOpen && (
-                <div
-                  className={`ticket-admin-filters__dropdown ${
-                    isDark
-                      ? "bg-[#1a1a2e] text-white border border-white/20"
-                      : "bg-white border border-[#090c64]/10"
-                  }`}
-                >
-                  <div
-                    onClick={() => {
-                      setSelectedStatus("");
-                      setStatusDropdownOpen(false);
-                    }}
-                    className={`ticket-admin-filters__dropdown-item ${
-                      isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
-                    }`}
-                  >
-                    <CircleIcon
-                      size={16}
-                      weight="duotone"
-                      color={isDark ? "white" : "#090c64"}
-                    />
-                    {t("tutti")}
-                  </div>
-
-                  <div
-                    onClick={() => {
-                      setSelectedStatus("aperto");
-                      setStatusDropdownOpen(false);
-                    }}
-                    className={`ticket-admin-filters__dropdown-item ${
-                      isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
-                    }`}
-                  >
-                    <CircleIcon size={16} weight="fill" color="#3B82F6" />
-                    {t("aperti")}
-                  </div>
-
-                  <div
-                    onClick={() => {
-                      setSelectedStatus("risolto");
-                      setStatusDropdownOpen(false);
-                    }}
-                    className={`ticket-admin-filters__dropdown-item ${
-                      isDark ? "hover:bg-white/10" : "hover:bg-blue-50"
-                    }`}
-                  >
-                    <CircleIcon size={16} weight="fill" color="#F59E0B" />
-                    {t("risolti")}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="page-section-stack h-full min-w-0 w-full">
 
       {/* CALENDAR MODAL */}
       {calendarOpen && (
@@ -619,125 +494,151 @@ const TicketPageAdmin = () => {
         </div>
       )}
 
-      <div className="ticket-ai-insights-wrap min-w-0 w-full shrink-0">
-        <TicketAiInsightsPanel
-          data={ticketInsights}
-          loading={insightsLoading}
-          error={insightsError}
-          onRefresh={loadTicketInsights}
-          source={ticketInsights?.source}
-        />
-      </div>
+      <TicketAiInsightsPanel
+        data={ticketInsights}
+        loading={insightsLoading}
+        error={insightsError}
+        source={ticketInsights?.source}
+      />
 
       {/* Lista ticket */}
-      <div className="w-full min-w-0 app-surface p-6">
-          <h2
-            className={`mb-4 flex items-center gap-2 text-lg font-bold ${
-              isDark ? "text-white" : "text-[#090c64]"
-            }`}
+      <div className="w-full min-w-0 app-surface p-4 ticket-page-list">
+        <div className="dashboard-card-header ticket-page-list__header">
+          <div className="ticket-page-list__lead">
+            <h2
+              className={`flex items-center gap-2 text-lg font-bold shrink-0 ${
+                isDark ? "text-white" : "text-[#090c64]"
+              }`}
+            >
+              <ListMagnifyingGlassIcon
+                size={24}
+                weight="duotone"
+                className="preserve-icon-size shrink-0"
+              />
+              {t("listaTicket")}
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              className="calendar-view-btn sales-trend-filter-btn ticket-page-list__date-btn"
+              aria-label={t("selezionaIntervalloData")}
+            >
+              <CalendarDotsIcon size={16} weight="duotone" className="shrink-0" />
+              <span className="ticket-page-list__date-label">{dateRangeLabel}</span>
+            </button>
+          </div>
+
+          <div
+            className="sales-trend-filters ticket-status-filters"
+            role="group"
+            aria-label={`${t("aperti")} / ${t("chiusi")}`}
           >
-            <ListMagnifyingGlassIcon size={24} weight="duotone" className="preserve-icon-size shrink-0" />
-            {t("listaTicket")}
-          </h2>
-
-          <p className={`text-xs mb-3 ${isDark ? "text-white/70" : "text-gray-600"}`}>
-            {t("aiTicketListAiHint")}
-            {selectedAiPriority === "none" && (
-              <span className="block mt-1 opacity-90">{t("aiUnclassifiedHint")}</span>
-            )}
-            {urgentCount > 0 && (
-              <span className="font-bold text-red-600 dark:text-red-300">
-                {" "}
-                · {urgentCount} {t("aiPriorityAlta").toLowerCase()}
-              </span>
-            )}
-          </p>
-
-          <div className="ticket-ai-priority-filters">
             {[
-              { key: "", label: t("aiFilterAllPriorities"), count: baseFilteredTickets.length },
-              { key: "alta", label: t("aiPriorityAlta"), urgent: true, count: aiPriorityCounts.alta },
-              { key: "media", label: t("aiPriorityMedia"), count: aiPriorityCounts.media },
-              { key: "bassa", label: t("aiPriorityBassa"), count: aiPriorityCounts.bassa },
-              { key: "none", label: t("aiUnclassified"), count: aiPriorityCounts.none },
-            ].map(({ key, label, urgent, count }) => (
+              { key: "aperto", label: t("aperti"), count: ticketStatusCounts.aperto },
+              { key: "chiuso", label: t("chiusi"), count: ticketStatusCounts.chiuso },
+            ].map(({ key, label, count }) => (
               <button
-                key={key || "all"}
+                key={key}
                 type="button"
-                onClick={() => setSelectedAiPriority(key)}
-                className={`ticket-ai-priority-filters__btn${
-                  selectedAiPriority === key ? " is-active" : ""
-                }${urgent ? " ticket-ai-priority-filters__btn--urgent" : ""}`}
+                onClick={() => setSelectedStatusFilter(key)}
+                className={`calendar-view-btn sales-trend-filter-btn${
+                  selectedStatusFilter === key ? " active" : ""
+                }`}
+                aria-pressed={selectedStatusFilter === key}
               >
                 {label} ({count})
               </button>
             ))}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div
+            className="sales-trend-filters ticket-priority-filters"
+            role="group"
+            aria-label={t("aiFilterAllPriorities")}
+          >
+            {[
+              { key: "", label: t("aiFilterAllPriorities"), count: baseFilteredTickets.length },
+              { key: "alta", label: t("aiPriorityAlta"), count: aiPriorityCounts.alta },
+              { key: "media", label: t("aiPriorityMedia"), count: aiPriorityCounts.media },
+              { key: "bassa", label: t("aiPriorityBassa"), count: aiPriorityCounts.bassa },
+              { key: "none", label: t("aiUnclassified"), count: aiPriorityCounts.none },
+            ].map(({ key, label, count }) => (
+              <button
+                key={key || "all"}
+                type="button"
+                onClick={() => setSelectedAiPriority(key)}
+                className={`calendar-view-btn sales-trend-filter-btn${
+                  selectedAiPriority === key ? " active" : ""
+                }`}
+                aria-pressed={selectedAiPriority === key}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p
+          className={`ticket-page-list__hint text-xs ${
+            isDark ? "text-white/70" : "text-gray-600"
+          }`}
+        >
+          {t("aiTicketListAiHint")}
+          {selectedAiPriority === "none" && (
+            <span className="block mt-1 opacity-90">{t("aiUnclassifiedHint")}</span>
+          )}
+          {urgentCount > 0 && (
+            <span className="font-bold text-red-600 dark:text-red-300">
+              {" "}
+              · {urgentCount} {t("aiPriorityAlta").toLowerCase()}
+            </span>
+          )}
+        </p>
+
+        <div className="ticket-page-list__items flex flex-col gap-2">
             {filteredTickets
               .slice()
               .sort(sortTicketsByAiPriority)
               .map((ticket) => {
                 const id = ticket._id || ticket.id;
-                const s = ticketStatus[id];
 
                 const raw = ticket.date || ticket.createdAt || ticket.updatedAt || "";
                 const isHighlighted = raw.split("T")[0] === highlightDate;
 
-                const statusLabel =
-                  s === "risolto" ? t("risolti") : t("aperti");
-                const isUrgent = getTicketAiPriorityFilter(ticket) === "alta";
                 const displayClassification = getDisplayAiClassification(ticket);
+
+                const userName = [
+                  ticket.user?.nome || ticket.user?.firstName || ticket.user?.name || "",
+                  ticket.user?.cognome || ticket.user?.lastName || "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
 
                 return (
                   <div
                     key={id}
                     ref={(el) => (itemRefs.current[id] = el)}
-                    className={`ticket-list-card p-3 rounded-lg flex justify-between items-start cursor-pointer transition hover:shadow-md ${
+                    className={`ticket-list-card ticket-list-card--admin rounded-lg cursor-pointer transition hover:shadow-md ${
                       isHighlighted ? "ring-2 ring-blue-100 dark:ring-white/30" : ""
-                    }${isUrgent ? " ticket-list-card--ai-urgent" : ""}`}
+                    }`}
                     onClick={() => {
                       setSelectedTicket(ticket);
                       setHighlightDate(raw.split("T")[0] || "");
                       setDrawerOpen(true);
                     }}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <div
-                          className={`text-sm font-semibold truncate ${
-                            isDark ? "text-white" : "text-gray-900"
-                          }`}
-                        >
-                          {ticket.title || ticket.name}
-                        </div>
-                      </div>
-
-                      <TicketAiLabels
-                        classification={displayClassification}
-                        showSummary
-                      />
-
-                      {ticket.assignedDepartment && (
-                        <span className="ticket-ai-label ticket-ai-label--category ai-category-badge text-xs mt-1">
-                          {t("ticketAssignedShort")}:{" "}
-                          {t(getTicketDepartmentLabelKey(ticket.assignedDepartment))}
-                        </span>
-                      )}
-
-                      <div
-                        className={`text-xs mt-1.5 ${
-                          isDark ? "text-white/70" : "text-gray-600"
+                    <div className="ticket-list-card__primary">
+                      <p
+                        className={`ticket-list-card__title ${
+                          isDark ? "text-white" : "text-gray-900"
                         }`}
                       >
-                        {(ticket.user?.nome || ticket.user?.firstName || ticket.user?.name || "")}{" "}
-                        {(ticket.user?.cognome || ticket.user?.lastName || "")} •{" "}
-                        {formatDate(ticket.date || ticket.createdAt || ticket.updatedAt)}
-                      </div>
+                        {ticket.title || ticket.name}
+                      </p>
                       {(ticket.description || ticket.content) && (
                         <p
-                          className={`text-xs mt-1 line-clamp-2 ${
+                          className={`ticket-list-card__excerpt ${
                             isDark ? "text-white/80" : "text-gray-700"
                           }`}
                         >
@@ -746,14 +647,38 @@ const TicketPageAdmin = () => {
                       )}
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2 ml-3">
-                      <span
-                        className={`ticket-status-pill text-xs px-3 py-1 rounded-lg font-semibold shrink-0 ${
-                          s === "risolto" ? "is-closed" : "is-open"
-                        }`}
-                      >
-                        {statusLabel}
+                    <div className="ticket-list-card__ai">
+                      <TicketAiLabels
+                        classification={displayClassification}
+                        compact
+                      />
+                      {displayClassification?.summary && (
+                        <p className="ticket-list-card__summary">
+                          {displayClassification.summary}
+                        </p>
+                      )}
+                      {ticket.assignedDepartment && (
+                        <span className="business-overview-area business-overview-area--department text-xs">
+                          {t("ticketAssignedShort")}:{" "}
+                          {t(getTicketDepartmentLabelKey(ticket.assignedDepartment))}
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      className={`ticket-list-card__meta ${
+                        isDark ? "text-white/70" : "text-gray-600"
+                      }`}
+                    >
+                      {userName && (
+                        <span className="ticket-list-card__user">{userName}</span>
+                      )}
+                      <span className="ticket-list-card__date">
+                        {formatDate(ticket.date || ticket.createdAt || ticket.updatedAt)}
                       </span>
+                    </div>
+
+                    <div className="ticket-list-card__actions">
                       <button
                         type="button"
                         className="custom-button text-xs px-3 py-1.5"
@@ -775,181 +700,150 @@ const TicketPageAdmin = () => {
 
       {/* DRAWER */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="drawer-root">
           <div className="drawer-overlay" onClick={() => setDrawerOpen(false)} />
 
           <aside
-            className="drawer-panel"
+            className="drawer-panel drawer-panel--ticket-detail"
             style={{ "--drawer-bg-image": `url(${theme === "light" ? bgLight : bgDark})` }}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="ticket-drawer-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <header className="sticky top-0 z-10 border-b border-white/60 px-6 py-4 flex items-center justify-between">
-              <h2
-                className={`text-lg font-bold ${
-                  isDark ? "text-white" : "text-[#090c64]"
-                }`}
+            <header className="drawer-header">
+              <h2 className="drawer-title">{t("dettagliTicket")}</h2>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="custom-button"
+                type="button"
               >
-                {t("dettagliTicket")}
-              </h2>
-              <button onClick={() => setDrawerOpen(false)} className="custom-button" type="button">
                 {t("chiudi")}
               </button>
             </header>
 
-            <div
-              className={`p-6 text-[15px] leading-relaxed ${
-                isDark ? "text-white" : "text-[#090c64]"
-              }`}
-            >
-              {selectedTicket && (
-                <>
-                  <div
-                    className={`flex flex-col gap-3 mb-4 p-2 rounded-xl border ${
-                      isDark
-                        ? "bg-white/10 border-white/20"
-                        : "bg-gray-50 border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
+            {selectedTicket && selectedTicketDetails && (
+                <div className="ticket-drawer-body">
+                  <header className="ticket-drawer-head">
+                    <div className="ticket-drawer-head__top">
+                      <h3 id="ticket-drawer-title" className="ticket-drawer-title">
+                        {selectedTicket.title || selectedTicket.name}
+                      </h3>
+                      <span
+                        className={`ticket-status-pill ticket-drawer-status ${
+                          selectedTicketDetails.isTicketClosed ? "is-closed" : "is-open"
+                        }`}
+                      >
+                        {selectedTicketDetails.statusLabel}
+                      </span>
+                    </div>
+
+                    <div className="ticket-drawer-meta">
+                      <span className="ticket-drawer-meta__date">
+                        <CalendarDotsIcon size={16} weight="duotone" />
+                        {selectedTicketDetails.ticketDate}
+                      </span>
+                      {selectedTicketDetails.hasAiInsights && (
+                        <TicketAiLabels
+                          classification={selectedTicketDetails.displayClassification}
+                          compact
+                        />
+                      )}
+                    </div>
+                  </header>
+
+                  <section className="ticket-drawer-section">
+                    <h4 className="ticket-drawer-section__label">{t("ticketRequester")}</h4>
+                    <div className="ticket-drawer-requester">
                       <UserCircleIcon
-                        size={48}
+                        size={40}
                         color={isDark ? "white" : "#090c64"}
                         weight="duotone"
+                        className="ticket-drawer-requester__avatar shrink-0"
                       />
-                      <div className="flex flex-col">
-                        <span
-                          className={`font-semibold ${
-                            isDark ? "text-white" : "text-gray-800"
-                          }`}
-                        >
-                          {(selectedTicket.user?.nome || selectedTicket.user?.firstName || selectedTicket.user?.name || "")}{" "}
-                          {(selectedTicket.user?.cognome || selectedTicket.user?.lastName || "")}
-                        </span>
-                        <span
-                          className={`text-sm ${
-                            isDark ? "text-white/70" : "text-gray-500"
-                          }`}
-                        >
-                          {selectedTicket.user?.ruolo || selectedTicket.user?.role || ""}
-                        </span>
-                        <span
-                          className={`text-sm ${
-                            isDark ? "text-white/70" : "text-gray-500"
-                          }`}
-                        >
-                          {selectedTicket.user?.email || ""}
-                        </span>
+                      <div className="ticket-drawer-requester__info">
+                        {selectedTicketDetails.requesterName && (
+                          <span className="ticket-drawer-requester__name">
+                            {selectedTicketDetails.requesterName}
+                          </span>
+                        )}
+                        {selectedTicketDetails.requesterRole && (
+                          <span className="ticket-drawer-requester__meta">
+                            {selectedTicketDetails.requesterRole}
+                          </span>
+                        )}
+                        {selectedTicketDetails.requesterEmail && (
+                          <span className="ticket-drawer-requester__meta ticket-drawer-requester__email">
+                            {selectedTicketDetails.requesterEmail}
+                          </span>
+                        )}
                       </div>
                     </div>
+                  </section>
 
-                    <div
-                      className={`mt-2 p-2 rounded-lg border ${
-                        isDark
-                          ? "bg-white/10 border-white/20"
-                          : "bg-white border-gray-200"
-                      }`}
-                    >
-                      <span
-                        className={`font-semibold ${
-                          isDark ? "text-white" : "text-gray-800"
-                        }`}
-                      >
-                        {t("descrizione")}:
-                      </span>
-                      <p
-                        className={`text-sm mt-1 ${
-                          isDark ? "text-white/80" : "text-gray-700"
-                        }`}
-                      >
-                        {selectedTicket.description || selectedTicket.content}
-                      </p>
-                    </div>
+                  <section className="ticket-drawer-section">
+                    <h4 className="ticket-drawer-section__label">{t("descrizione")}</h4>
+                    <p className="ticket-drawer-description-text">
+                      {selectedTicket.description || selectedTicket.content}
+                    </p>
+                  </section>
 
-                    {hasValidAiClassification(selectedTicket) && (
-                      <div className="mt-2">
-                        <p className="text-xs font-bold mb-2 opacity-80">{t("aiTicketInsights")}</p>
-                        <TicketClassificationCard
-                          classification={getDisplayAiClassification(selectedTicket)}
-                        />
-                      </div>
-                    )}
-
-                    <TicketAssignmentPanel
-                      ticket={selectedTicket}
-                      isDemoMode={isDemoMode}
-                      onAssigned={(updated) => {
-                        setSelectedTicket(updated);
-                        if (isDemoMode) {
-                          const id = updated._id || updated.id;
-                          setDemoOverrides((prev) => ({
-                            ...prev,
-                            [id]: { assignedDepartment: updated.assignedDepartment },
-                          }));
-                        }
-                      }}
-                    />
-                  </div>
+                  <TicketAssignmentPanel
+                    ticket={selectedTicket}
+                    isDemoMode={isDemoMode}
+                    onAssigned={(updated) => {
+                      setSelectedTicket(updated);
+                      if (isDemoMode) {
+                        const id = updated._id || updated.id;
+                        setDemoOverrides((prev) => ({
+                          ...prev,
+                          [id]: {
+                            assignedDepartment: updated.assignedDepartment,
+                          },
+                        }));
+                      }
+                    }}
+                  />
 
                   <TicketAiReplyAssistant
                     ticket={selectedTicket}
                     token={token}
                     isDemoMode={isDemoMode}
+                    onTicketUpdated={(updated) => {
+                      setSelectedTicket(updated);
+                      const id = updated._id || updated.id;
+                      if (!id) return;
+
+                      if (isDemoMode || String(id).startsWith("demo-ticket-")) {
+                        setDemoOverrides((prev) => ({
+                          ...prev,
+                          [id]: {
+                            ...prev[id],
+                            adminReply: updated.adminReply,
+                            status: updated.status ?? prev[id]?.status,
+                          },
+                        }));
+                      }
+
+                      if (updated.status) {
+                        setTicketStatus((s) => ({
+                          ...s,
+                          [id]: updated.status === "closed" ? "chiuso" : "aperto",
+                        }));
+                      }
+                    }}
+                    onReplySent={({ closed }) => {
+                      if (!isDemoMode) {
+                        dispatch(fetchTickets());
+                      }
+                      if (closed) {
+                        setDrawerOpen(false);
+                        setSelectedTicket(null);
+                      }
+                    }}
                   />
-
-                  <div className="flex flex-col gap-2 mb-4 mt-4">
-                    <button
-                      type="button"
-                      className="ticket-status-btn ticket-status-btn-open"
-                      onClick={async () => {
-                        const id = selectedTicket._id || selectedTicket.id;
-                        if (!id) return;
-
-                        setTicketStatus((s) => ({ ...s, [id]: "aperto" }));
-
-                        try {
-                          if (!String(id).startsWith("demo-ticket-")) {
-                            await dispatch(updateTicketAsync({ id, payload: { status: "open" } })).unwrap();
-                            dispatch(fetchTickets());
-                          }
-                        } catch (err) {
-                          setTicketStatus((s) => ({ ...s, [id]: "risolto" }));
-                          console.error("Update ticket failed", err);
-                        }
-                      }}
-                    >
-                      {t("aperto")}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="ticket-status-btn ticket-status-btn-resolved"
-                      onClick={async () => {
-                        const id = selectedTicket._id || selectedTicket.id;
-                        if (!id) return;
-
-                        setTicketStatus((s) => ({ ...s, [id]: "risolto" }));
-
-                        try {
-                          if (!String(id).startsWith("demo-ticket-")) {
-                            await dispatch(updateTicketAsync({ id, payload: { status: "closed" } })).unwrap();
-                            dispatch(fetchTickets());
-                          }
-                          setDrawerOpen(false);
-                          setSelectedTicket(null);
-                        } catch (err) {
-                          setTicketStatus((s) => ({ ...s, [id]: "aperto" }));
-                          console.error("Update ticket failed", err);
-                        }
-                      }}
-                    >
-                      {t("risolto")}
-                    </button>
-                  </div>
-                </>
+                </div>
               )}
-            </div>
           </aside>
         </div>
       )}

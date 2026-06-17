@@ -6,8 +6,14 @@ import Table from "../../components/Table";
 import FilterByCard from "../../components/Customer/FilterByCard";
 import AddCustomerForm from "../../components/Customer/AddCustomerForm";
 import AppFeedbackModal from "../../components/AppFeedbackModal";
+import CustomerPortfolioInsightsPanel from "../../components/Customer/CustomerPortfolioInsightsPanel";
+import CustomerPortfolioStatsRow from "../../components/Customer/CustomerPortfolioStatsRow";
+import CustomerPortfolioSuggestionsPanel from "../../components/Customer/CustomerPortfolioSuggestionsPanel";
 
 import { useLanguage } from "../../context/LanguageContext";
+import { useCustomerPortfolioInsights } from "../../hooks/useCustomerPortfolioInsights";
+import { fetchOrders } from "../../store/feature/orderSlice";
+import { fetchItems } from "../../store/feature/itemsSlice";
 import {
   fetchCustomersAsync,
   createCustomerAsync,
@@ -23,10 +29,25 @@ const CustomersPage = () => {
   const { list: customers = [], loading, error } = useSelector(
     (state) => state.customers
   );
+  const authUser = useSelector((state) => state.auth.user);
+  const isAdmin = authUser?.role === "admin";
+  const orders = useSelector((state) => state.orders?.items ?? []);
+  const warehouseItems = useSelector((state) => state.items.list) || [];
 
   const token =
     useSelector((state) => state.auth?.token) ||
     localStorage.getItem("token");
+
+  const {
+    data: portfolioData,
+    loading: portfolioLoading,
+    source: portfolioSource,
+  } = useCustomerPortfolioInsights({
+    enabled: isAdmin,
+    orders,
+    customers,
+    items: warehouseItems,
+  });
 
   /* LOCAL STATE */
   const [cardFilter, setCardFilter] = useState("");
@@ -36,7 +57,12 @@ const CustomersPage = () => {
   useEffect(() => {
     if (!token) return;
     dispatch(fetchCustomersAsync(token));
-  }, [dispatch, token]);
+
+    if (isAdmin) {
+      dispatch(fetchOrders({ token }));
+      dispatch(fetchItems());
+    }
+  }, [dispatch, token, isAdmin]);
 
   /* ERROR HANDLING */
   useEffect(() => {
@@ -137,7 +163,26 @@ const CustomersPage = () => {
   }
 
   return (
-    <div className="w-full min-h-screen">
+    <div className="customers-page page-section-stack w-full min-h-screen">
+      {isAdmin && portfolioData?.database ? (
+        <CustomerPortfolioStatsRow database={portfolioData.database} />
+      ) : null}
+
+      {isAdmin ? (
+        <div className="customers-page__insights-grid">
+          <CustomerPortfolioInsightsPanel
+            data={portfolioData}
+            loading={portfolioLoading}
+          />
+          <CustomerPortfolioSuggestionsPanel
+            data={portfolioData}
+            loading={portfolioLoading}
+            source={portfolioSource}
+            offlineHint={portfolioData?.isDemo}
+          />
+        </div>
+      ) : null}
+
       {/* CUSTOMERS TABLE*/}
       <Table
         data={tableData}

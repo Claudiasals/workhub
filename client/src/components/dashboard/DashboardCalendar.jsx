@@ -41,6 +41,7 @@ import {
   getCompanyEventStyle,
   resolveCompanyEventKind,
 } from "../../utils/shiftsCalendar";
+import { shiftStaggerDayLayout } from "../../utils/shiftCalendarLayout";
 import { SHIFT_PERIOD_KEYS, getShiftPeriodLabel } from "../../utils/shiftPeriods";
 import {
   buildDemoCompanyEvents,
@@ -49,7 +50,20 @@ import {
   isRangeOverlappingCurrentWeek,
 } from "../../utils/calendarDemo";
 
-const CALENDAR_HEIGHT = 580;
+const CALENDAR_MIN = new Date(1970, 1, 1, 7, 0, 0);
+const CALENDAR_MAX = new Date(1970, 1, 1, 22, 0, 0);
+const CALENDAR_SCROLL_TO = new Date(1970, 1, 1, 7, 0, 0);
+const CALENDAR_TIME_HOURS = 15;
+const CALENDAR_TIME_VIEW_SLOT_PX = 32;
+const CALENDAR_TIME_VIEW_CHROME_PX = 196;
+const CALENDAR_HEIGHT_MONTH = 720;
+
+function getDashboardCalendarHeight(view) {
+  if (view === "month") return CALENDAR_HEIGHT_MONTH;
+
+  // Week & day: stessa griglia oraria compatta (7:00–22:00)
+  return CALENDAR_TIME_VIEW_CHROME_PX + CALENDAR_TIME_HOURS * CALENDAR_TIME_VIEW_SLOT_PX;
+}
 
 const locales = { it, en: enGB };
 
@@ -183,6 +197,7 @@ export function DashboardCalendar({ canManage = false }) {
   const [mode, setMode] = useState("shifts");
   const [shiftScope, setShiftScope] = useState(canManage ? "workplace" : "mine");
   const [view, setView] = useState("week");
+  const calendarHeight = useMemo(() => getDashboardCalendarHeight(view), [view]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedItem, setSelectedItem] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -367,14 +382,20 @@ export function DashboardCalendar({ canManage = false }) {
       ? getShiftPeriodStyle(event.period)
       : getCompanyEventStyle(event.eventKind || "event");
 
+    const shiftZIndex = event.isShift
+      ? { early: 1, mid: 2, late: 3 }[event.period] || 1
+      : undefined;
+
     return {
       style: {
         backgroundColor,
         color,
-        borderRadius: "8px",
+        borderRadius: "10px",
         border: "none",
         fontSize: "12px",
+        boxSizing: "border-box",
         cursor: event.isShift ? "pointer" : undefined,
+        ...(shiftZIndex != null && { zIndex: shiftZIndex }),
       },
     };
   };
@@ -406,10 +427,11 @@ export function DashboardCalendar({ canManage = false }) {
         className={`app-surface company-events-calendar dashboard-calendar-card p-4 min-w-0 w-full ${textColor}`}
       >
         <div className="dashboard-card-header dashboard-calendar-header mb-3">
-          <CalendarIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
-
           <div className="dashboard-calendar-header__title-group">
-            <h3 className="text-sm font-bold">{headerTitle}</h3>
+            <div className="panel-header-leading panel-header-leading--single">
+              <CalendarIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
+              <h3 className="text-sm font-bold">{headerTitle}</h3>
+            </div>
             <div className="calendar-mode-toggle">
               <button
                 type="button"
@@ -446,7 +468,9 @@ export function DashboardCalendar({ canManage = false }) {
           </div>
         </div>
 
-        <div className={`company-events-calendar__body ${theme === "dark" ? "dark" : "light"}`}>
+        <div
+          className={`company-events-calendar__body calendar-rbc-wrap calendar-rbc-wrap--${view}${mode === "shifts" ? " calendar-rbc-wrap--shifts" : ""} ${theme === "dark" ? "dark" : "light"}`}
+        >
           <Calendar
             localizer={localizer}
             culture={lang === "en" ? "en" : "it"}
@@ -459,10 +483,13 @@ export function DashboardCalendar({ canManage = false }) {
             views={["month", "week", "day"]}
             startAccessor="start"
             endAccessor="end"
-            style={{ height: CALENDAR_HEIGHT }}
-            scrollToTime={new Date(1970, 1, 1, 7, 30, 0)}
-            min={new Date(1970, 1, 1, 7, 0, 0)}
-            max={new Date(1970, 1, 1, 20, 0, 0)}
+            style={{ height: calendarHeight }}
+            scrollToTime={CALENDAR_SCROLL_TO}
+            min={CALENDAR_MIN}
+            max={CALENDAR_MAX}
+            step={60}
+            timeslots={1}
+            dayLayoutAlgorithm={mode === "shifts" ? shiftStaggerDayLayout : "overlap"}
             eventPropGetter={eventPropGetter}
             onSelectEvent={handleSelectEvent}
             components={{

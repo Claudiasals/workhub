@@ -41,6 +41,11 @@ const TicketSchema = new Schema({
         default: null,
         required: false,
     },
+    adminReply: {
+        type: String,
+        default: null,
+        required: false,
+    },
 }, { strict: true, timestamps: true, versionKey: false });
 
 const TicketModel = model('Ticket', TicketSchema);

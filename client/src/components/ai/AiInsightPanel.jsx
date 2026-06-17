@@ -8,7 +8,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { SparkleIcon, CircleNotchIcon } from "@phosphor-icons/react";
+import {
+  SparkleIcon,
+  CircleNotchIcon,
+  WarningCircleIcon,
+  WarningIcon,
+  LightbulbIcon,
+  InfoIcon,
+} from "@phosphor-icons/react";
 import { useLanguage } from "../../context/LanguageContext";
 import { useTheme } from "../../context/ThemeContext";
 import { AI_PRIORITIES } from "../../utils/ticketAiClassification";
@@ -16,18 +23,45 @@ import { AI_PRIORITIES } from "../../utils/ticketAiClassification";
 const AiInsightBodyRefContext = createContext(null);
 
 const severityClassMap = {
-  high: "ai-alert-item--high",
-  medium: "ai-alert-item--medium",
-  low: "ai-alert-item--low",
-  info: "ai-alert-item--info",
+  high: "business-overview-item--urgency-alta",
+  medium: "business-overview-item--urgency-media",
+  low: "business-overview-item--urgency-bassa",
+  info: "business-overview-item--urgency-normale",
+};
+
+const severityIconMap = {
+  high: WarningCircleIcon,
+  medium: WarningIcon,
+  low: LightbulbIcon,
+  info: InfoIcon,
 };
 
 const severityOrder = { high: 0, medium: 1, low: 2, info: 3 };
 
-const priorityClassMap = {
-  alta: "ai-priority-badge--alta",
-  media: "ai-priority-badge--media",
-  bassa: "ai-priority-badge--bassa",
+const splitAlertMessage = (message) => {
+  if (!message) return { title: "", description: "" };
+
+  const parts = String(message).split(" — ");
+  if (parts.length < 2) {
+    return { title: message, description: "" };
+  }
+
+  return {
+    title: parts[0],
+    description: parts.slice(1).join(" — "),
+  };
+};
+
+const priorityImportanceClass = {
+  alta: "doc-importance--critical",
+  media: "doc-importance--important",
+  bassa: "doc-importance--normal",
+};
+
+const priorityUrgencyClass = {
+  alta: "business-overview-item--urgency-alta",
+  media: "business-overview-item--urgency-media",
+  bassa: "business-overview-item--urgency-bassa",
 };
 
 export const AiBadge = ({ source }) => {
@@ -63,6 +97,7 @@ export const AiLoadingIndicator = ({ className = "" }) => {
 
 export const AiInsightPanel = ({
   title,
+  description = "",
   loading = false,
   error = "",
   source,
@@ -100,28 +135,37 @@ export const AiInsightPanel = ({
   return (
     <section
       style={style}
-      className={`app-surface flex flex-col min-w-0 ${textColor} ${
-        compact ? "gap-2 p-3" : "gap-3 p-4"
+      className={`app-surface ai-insight-panel--page-section flex flex-col min-w-0 ${textColor} ${
+        compact ? "gap-2 p-3 ai-insight-panel--compact" : "gap-3 p-4"
       }${fillHeight ? " ai-insight-panel--fill" : ""}${className ? ` ${className}` : ""}`}
     >
-      <div className="dashboard-card-header w-full shrink-0">
-        <SparkleIcon
-          size={24}
-          weight="duotone"
-          color={iconColor}
-          className="preserve-icon-size shrink-0"
-        />
-        <h3 className="text-[14px] font-bold shrink-0">{title}</h3>
-        <AiBadge source={source} />
+      <div className="business-overview-panel__header w-full shrink-0">
+        <div className="panel-header-leading min-w-0 flex-1">
+          <SparkleIcon
+            size={24}
+            weight="duotone"
+            color={iconColor}
+            className="preserve-icon-size shrink-0"
+          />
+          <div className="panel-header-leading__text min-w-0">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <h3 className="text-sm font-bold leading-tight shrink-0">{title}</h3>
+              <AiBadge source={source} />
+            </div>
+            {description ? (
+              <p className="ai-insight-panel__desc">{description}</p>
+            ) : null}
+          </div>
+        </div>
 
         {(onRefresh || onClose) && (
-          <div className="card-toolbar-actions">
+          <div className="card-toolbar-actions ai-insight-panel__actions">
             {onRefresh && (
               <button
                 type="button"
                 onClick={onRefresh}
                 disabled={loading}
-                className="custom-button text-[14px]"
+                className="custom-button text-sm"
               >
                 {refreshLabel || t("aiRefresh")}
               </button>
@@ -130,7 +174,7 @@ export const AiInsightPanel = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="custom-button text-[14px]"
+                className="custom-button text-sm"
               >
                 {t("chiudi")}
               </button>
@@ -191,7 +235,7 @@ export const AiAlertList = ({
       return;
     }
 
-    const itemNodes = measureRoot.querySelectorAll(".ai-alert-item");
+    const itemNodes = measureRoot.querySelectorAll(".business-overview-item");
     if (!itemNodes.length) return;
 
     const needsToggle = sortedItems.length > 1;
@@ -246,34 +290,52 @@ export const AiAlertList = ({
       : sortedItems;
   const hiddenCount = hasHidden ? sortedItems.length - spaceLimit : 0;
 
-  const renderItem = (item, index) => (
-    <li
-      key={`${item.type}-${index}`}
-      className={`ai-alert-item ${
-        severityClassMap[item.severity] || severityClassMap.info
-      }${compact ? " ai-alert-item--compact" : ""}`}
-    >
-      {item[labelKey]}
-    </li>
-  );
+  const renderItem = (item, index) => {
+    const Icon = severityIconMap[item.severity] || InfoIcon;
+    const message = item[labelKey];
+    const { title, description } = splitAlertMessage(message);
+
+    return (
+      <li
+        key={`${item.type}-${index}`}
+        className={`business-overview-item ${
+          severityClassMap[item.severity] || severityClassMap.info
+        }`}
+      >
+        <span className="business-overview-item__icon" aria-hidden="true">
+          <Icon size={16} weight="duotone" />
+        </span>
+        <div className="business-overview-item__body">
+          <p className="business-overview-item__title">{title || message}</p>
+          {description ? (
+            <p className="business-overview-item__desc">{description}</p>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
+
+  const listClassName = `business-overview-list business-overview-list--expanded${
+    compact ? " sales-commercial-insights" : ""
+  }`;
 
   return (
     <div
-      className={`ai-alert-list-wrap${fitToSpace ? " ai-alert-list-wrap--fit" : ""}`}
+      className={`business-overview-list-wrap ai-alert-list-wrap${
+        fitToSpace ? " ai-alert-list-wrap--fit" : ""
+      }`}
     >
       {fitToSpace && (
         <ul
           ref={measureRef}
-          className={`ai-alert-list ai-alert-list--measure${
-            compact ? " ai-alert-list--compact" : ""
-          }`}
+          className={`${listClassName} ai-alert-list--measure`}
           aria-hidden="true"
         >
           {sortedItems.map(renderItem)}
         </ul>
       )}
 
-      <ul className={`ai-alert-list${compact ? " ai-alert-list--compact" : ""}`}>
+      <ul className={listClassName}>
         {visibleItems.map(renderItem)}
       </ul>
 
@@ -332,7 +394,7 @@ export const TicketAiLabels = ({
 
   if (!isValid) {
     return (
-      <span className="ticket-ai-label ticket-ai-label--none">
+      <span className="company-doc-importance doc-importance--normal">
         {t("aiUnclassified")}
       </span>
     );
@@ -349,18 +411,20 @@ export const TicketAiLabels = ({
       }`}
     >
       <span
-        className={`ticket-ai-label ticket-ai-label--priority ai-priority-badge ${
-          priorityClassMap[priority] || priorityClassMap.bassa
+        className={`company-doc-importance ${
+          priorityImportanceClass[priority] || priorityImportanceClass.bassa
         }`}
       >
         {t(priorityKey)}
       </span>
-      <span className="ticket-ai-label ticket-ai-label--category ai-category-badge">
+      <span className="business-overview-area business-overview-area--department">
         {t(categoryKey)}
       </span>
       <AiBadge source={classification.source} />
       {showSummary && classification.summary && (
-        <span className="ticket-ai-summary">{classification.summary}</span>
+        <p className="ticket-ai-summary business-overview-item__desc">
+          {classification.summary}
+        </p>
       )}
     </div>
   );
@@ -373,32 +437,37 @@ export const TicketClassificationCard = ({ classification }) => {
   }
 
   return (
-    <div className="ai-classification-card">
-      <div className="flex flex-wrap gap-2">
-        <span
-          className={`ai-priority-badge ${
-            priorityClassMap[classification.priority] ||
-            priorityClassMap.bassa
-          }`}
-        >
-          {t(priorityKeyMap[classification.priority])}
-        </span>
-        <span className="ai-category-badge">
-          {t(categoryKeyMap[classification.category] || "aiCatAltro")}
-        </span>
+    <div
+      className={`business-overview-item ticket-classification-card ${
+        priorityUrgencyClass[classification.priority] ||
+        priorityUrgencyClass.bassa
+      }`}
+    >
+      <div className="business-overview-item__body">
+        <div className="ticket-ai-labels ticket-ai-labels--compact">
+          <span
+            className={`company-doc-importance ${
+              priorityImportanceClass[classification.priority] ||
+              priorityImportanceClass.bassa
+            }`}
+          >
+            {t(priorityKeyMap[classification.priority])}
+          </span>
+          <span className="business-overview-area business-overview-area--department">
+            {t(categoryKeyMap[classification.category] || "aiCatAltro")}
+          </span>
+        </div>
+        {classification.summary && (
+          <p className="business-overview-item__desc">
+            <strong>{t("aiSummary")}:</strong> {classification.summary}
+          </p>
+        )}
+        {classification.adminSuggestion && (
+          <p className="business-overview-item__desc">
+            <strong>{t("aiSuggestion")}:</strong> {classification.adminSuggestion}
+          </p>
+        )}
       </div>
-      {classification.summary && (
-        <p>
-          <span className="font-extrabold">{t("aiSummary")}:</span>{" "}
-          {classification.summary}
-        </p>
-      )}
-      {classification.adminSuggestion && (
-        <p>
-          <span className="font-extrabold">{t("aiSuggestion")}:</span>{" "}
-          {classification.adminSuggestion}
-        </p>
-      )}
     </div>
   );
 };

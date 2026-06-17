@@ -19,7 +19,14 @@ const getItemStockLimit = (item) => Number(item.stockLimit ?? 0);
 
 const isLowStockItem = (item) => getItemStock(item) <= getItemStockLimit(item);
 
-const WarehouseTable = ({ data, allItems, columns }) => {
+const WarehouseTable = ({
+  data,
+  allItems,
+  columns,
+  onAddStock,
+  onToggleAi,
+  aiPanelOpen = false,
+}) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const dispatch = useDispatch();
@@ -188,6 +195,27 @@ const WarehouseTable = ({ data, allItems, columns }) => {
         </div>
 
         <div className="warehouse-toolbar-actions">
+          {onToggleAi && (
+            <button
+              type="button"
+              onClick={onToggleAi}
+              aria-pressed={aiPanelOpen}
+              className={`custom-button text-sm${aiPanelOpen ? " is-active" : ""}`}
+            >
+              {t("aiWarehouseTitle")}
+            </button>
+          )}
+
+          {onAddStock && (
+            <button
+              type="button"
+              onClick={onAddStock}
+              className="custom-button text-sm"
+            >
+              {t("caricaGiacenza")}
+            </button>
+          )}
+
           <button
             onClick={() => dispatch(toggleLowStockFilter())}
             aria-pressed={lowStockFilter}

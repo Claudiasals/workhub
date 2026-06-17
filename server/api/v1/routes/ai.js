@@ -10,6 +10,7 @@ import {
   postBusinessOverview,
   postGenerateCommunication,
   postGenerateTicketReply,
+  postSalesInsights,
   postShiftAnalysis,
   postTicketInsights,
   postTicketSuggestions,
@@ -28,6 +29,7 @@ router.post("/shifts/analyze", authUser, requireAdmin, postShiftAnalysis);
 router.post("/communications/generate", authUser, requireAdmin, postGenerateCommunication);
 router.post("/dashboard/insights", authUser, requireAdmin, postDashboardInsights);
 router.post("/business/overview", authUser, requireAdmin, postBusinessOverview);
+router.post("/sales/insights", authUser, requireAdmin, postSalesInsights);
 router.post("/customers/insights", authUser, requireAdmin, postCustomerInsights);
 router.post("/customers/promo-email", authUser, requireAdmin, postCustomerPromoEmail);
 

@@ -197,13 +197,19 @@ export function analyzeTicketInsightsLocal(tickets = []) {
     });
   }
 
-  if (insights.length === 0) {
+  if (insights.length === 0 && normalized.length > 0) {
     insights.push({
       type: "info",
-      title: normalized.length ? "Panoramica ticket" : "Dati insufficienti",
-      description: normalized.length
-        ? `${openTickets.length} aperti su ${normalized.length} ticket totali.`
-        : "Non ci sono ticket sufficienti per generare insight.",
+      title: "Trend ticket",
+      description: `${openTickets.length} aperti su ${normalized.length} ticket nel periodo analizzato.`,
+    });
+  }
+
+  if (normalized.length === 0) {
+    insights.push({
+      type: "info",
+      title: "Dati insufficienti",
+      description: "Non ci sono ticket sufficienti per generare insight.",
     });
   }
 

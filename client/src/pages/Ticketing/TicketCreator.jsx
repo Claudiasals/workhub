@@ -205,7 +205,7 @@ const TicketCreator = ({ user }) => {
                   isClosed ? "is-closed" : "is-open"
                 }`}
               >
-                {isClosed ? t("risolto") : t("aperto")}
+                {isClosed ? t("chiuso") : t("aperto")}
               </span>
             </li>
           );

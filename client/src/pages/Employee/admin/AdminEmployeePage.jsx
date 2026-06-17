@@ -22,6 +22,11 @@ import { fetchAllShiftsAsync } from "../../../store/feature/shiftsSlice";
 import Drawer from "../../../components/Drawer";
 import Table from "../../../components/Table";
 import AppFeedbackModal from "../../../components/AppFeedbackModal";
+import { getEmployeeShiftStatusToday } from "../../../utils/employeeShiftStatusToday";
+import {
+  getShiftPeriodHoursLabel,
+  getShiftPeriodLabel,
+} from "../../../utils/shiftPeriods";
 
 const AdminEmployeePage = () => {
   const navigate = useNavigate();
@@ -38,11 +43,13 @@ const AdminEmployeePage = () => {
   const { list: pointsOfSale = [] } = useSelector(
     (state) => state.pos || {}
   );
+  const shifts = useSelector((state) => state.shifts.list) || [];
   const { token } = useSelector((state) => state.auth || {});
 
   // UI state
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [statsDrawer, setStatsDrawer] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [generatedPassword, setGeneratedPassword] = useState("");
@@ -56,11 +63,16 @@ const AdminEmployeePage = () => {
     dispatch(fetchAllShiftsAsync({ token }));
   }, [dispatch, token]);
 
-  // Stats
+  const { activeToday, inactiveToday } = useMemo(
+    () => getEmployeeShiftStatusToday(employees, shifts),
+    [employees, shifts]
+  );
+
   const stats = [
     {
+      key: "active",
       label: t("dipendentiAttivi"),
-      value: employees.length,
+      value: activeToday.length,
       icon: (
         <UsersThreeIcon
           size={24}
@@ -70,8 +82,9 @@ const AdminEmployeePage = () => {
       ),
     },
     {
+      key: "inactive",
       label: t("dipendentiInattivi"),
-      value: employees.filter((e) => e.onVacation).length,
+      value: inactiveToday.length,
       icon: (
         <UserCircleMinusIcon
           size={24}
@@ -81,6 +94,25 @@ const AdminEmployeePage = () => {
       ),
     },
   ];
+
+  const statsDrawerTitle =
+    statsDrawer === "active"
+      ? t("employeeStatsActiveDrawerTitle")
+      : statsDrawer === "inactive"
+        ? t("employeeStatsInactiveDrawerTitle")
+        : "";
+
+  const statsDrawerEmployees =
+    statsDrawer === "active"
+      ? activeToday
+      : statsDrawer === "inactive"
+        ? inactiveToday
+        : [];
+
+  const statsDrawerEmptyMessage =
+    statsDrawer === "active"
+      ? t("employeeStatsNoActiveToday")
+      : t("employeeStatsNoInactiveToday");
 
   // Prepare table data
   const tableData = useMemo(() => {
@@ -211,28 +243,22 @@ const AdminEmployeePage = () => {
       data-page-scroll
       className="adminEmployee w-full h-full flex flex-col gap-6 overflow-y-auto"
     >
-      {/* STATS + ADD EMPLOYEE */}
+      {/* STATS */}
       <section className="employee-stats-grid">
-        {stats.map((s, i) => (
-          <div
-            key={i}
-            className={`app-surface page-info-box ${textColor}`}
+        {stats.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`app-surface page-info-box page-info-box--clickable ${textColor}`}
+            onClick={() => setStatsDrawer(s.key)}
           >
             <span className="employee-stat-label">
               {s.icon}
               <span>{s.label}</span>
             </span>
             <span className="employee-stat-value font-semibold">{s.value}</span>
-          </div>
+          </button>
         ))}
-
-        <div
-          onClick={() => setCreateDrawerOpen(true)}
-          className="app-surface page-info-box employee-stat-action cursor-pointer"
-        >
-          <span className="text-xl">+</span>
-          {t("aggiungiDipendente")}
-        </div>
       </section>
 
       {/* EMPLOYEE TABLE */}
@@ -242,6 +268,15 @@ const AdminEmployeePage = () => {
         columnLabels={columnLabels}
         onRowClick={(row) => openEmployeeDetails(row.raw)}
         actionLabel={t("azioni")}
+        customToolbarRight={() => (
+          <button
+            type="button"
+            onClick={() => setCreateDrawerOpen(true)}
+            className="custom-button text-sm shrink-0"
+          >
+            + {t("aggiungiDipendente")}
+          </button>
+        )}
         actions={[
           {
             name: "edit",
@@ -265,6 +300,54 @@ const AdminEmployeePage = () => {
           },
         ]}
       />
+
+      <Drawer
+        open={statsDrawer != null}
+        onClose={() => setStatsDrawer(null)}
+        title={statsDrawerTitle}
+        width="w-[420px]"
+      >
+        {statsDrawerEmployees.length === 0 ? (
+          <p className={`employee-shift-status-empty ${textColor}`}>
+            {statsDrawerEmptyMessage}
+          </p>
+        ) : (
+          <ul className="employee-shift-status-list">
+            {statsDrawerEmployees.map((employee) => {
+              const periodsLabel =
+                statsDrawer === "active" && employee.periods?.length
+                  ? employee.periods
+                      .map(
+                        (period) =>
+                          `${getShiftPeriodLabel(period, t)} (${getShiftPeriodHoursLabel(period)})`
+                      )
+                      .join(" · ")
+                  : null;
+
+              return (
+                <li key={employee._id}>
+                  <button
+                    type="button"
+                    className={`employee-shift-status-item ${textColor}`}
+                    onClick={() => {
+                      setStatsDrawer(null);
+                      openEmployeeDetails(employee);
+                    }}
+                  >
+                    <span className="employee-shift-status-item__name">
+                      {employee.firstName} {employee.lastName}
+                    </span>
+                    <span className="employee-shift-status-item__meta">
+                      {employee.department || "—"}
+                      {periodsLabel ? ` · ${periodsLabel}` : ""}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Drawer>
 
       {/* CREATE DRAWER */}
       <Drawer

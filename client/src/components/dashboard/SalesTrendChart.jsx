@@ -4,15 +4,54 @@ import { Line } from "react-chartjs-2";
 import "../../utils/chartSetup";
 import { useLanguage } from "../../context/LanguageContext";
 import { buildBaseChartOptions } from "../../utils/chartTheme";
-import { resolveSalesTrendData } from "../../utils/salesTrend";
+import {
+  DEFAULT_SALES_TREND_MONTHS,
+  SALES_TREND_MONTH_OPTIONS,
+  resolveSalesTrendData,
+} from "../../utils/salesTrend";
 
-const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
+export const SALES_TREND_PERIOD_LABEL_KEYS = {
+  3: "venditeFilter3M",
+  6: "venditeFilter6M",
+  12: "venditeFilter12M",
+};
+
+export function SalesTrendPeriodFilters({ value, onChange, t }) {
+  return (
+    <div
+      className="sales-trend-filters"
+      role="group"
+      aria-label={t("venditePeriodLabel")}
+    >
+      {SALES_TREND_MONTH_OPTIONS.map((months) => (
+        <button
+          key={months}
+          type="button"
+          className={`calendar-view-btn sales-trend-filter-btn${
+            value === months ? " active" : ""
+          }`}
+          aria-pressed={value === months}
+          onClick={() => onChange(months)}
+        >
+          {t(SALES_TREND_PERIOD_LABEL_KEYS[months])}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const SalesTrendChart = ({
+  orders = [],
+  customers = [],
+  theme = "light",
+  monthsCount = DEFAULT_SALES_TREND_MONTHS,
+}) => {
   const { t, lang } = useLanguage();
   const isDark = theme === "dark";
 
-  const { data: trend, isDemo } = useMemo(
-    () => resolveSalesTrendData(orders, customers, lang),
-    [orders, customers, lang]
+  const { data: trend, isDemo, isEmpty } = useMemo(
+    () => resolveSalesTrendData(orders, customers, lang, monthsCount),
+    [orders, customers, lang, monthsCount]
   );
 
   const chartData = useMemo(
@@ -64,8 +103,8 @@ const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
   );
 
   const options = useMemo(
-    () =>
-      buildBaseChartOptions({
+    () => ({
+      ...buildBaseChartOptions({
         theme,
         lang,
         scales: {
@@ -109,14 +148,25 @@ const SalesTrendChart = ({ orders = [], customers = [], theme = "light" }) => {
           },
         },
       }),
+      layout: {
+        padding: { top: 4, right: 8, bottom: 0, left: 4 },
+      },
+    }),
     [theme, lang]
   );
 
+  const hintMessage = isDemo
+    ? t("venditeDemoHint").replace("{months}", String(monthsCount))
+    : isEmpty
+      ? t("venditeNessunDato").replace("{months}", String(monthsCount))
+      : null;
+
   return (
-    <div className="flex flex-col gap-2 min-w-0">
-      {isDemo && (
-        <p className="text-xs font-semibold opacity-70">{t("venditeDemoHint")}</p>
-      )}
+    <div className="sales-trend-chart-body flex flex-col gap-2 min-w-0">
+      {hintMessage ? (
+        <p className="text-xs font-semibold opacity-70">{hintMessage}</p>
+      ) : null}
+
       <div className="app-line-chart">
         <Line data={chartData} options={options} />
       </div>

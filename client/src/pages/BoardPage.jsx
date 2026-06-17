@@ -14,10 +14,19 @@ import { fetchUsersAsync } from "../store/feature/userSlice";
 import { fetchAllShiftsAsync, fetchUserShiftsAsync } from "../store/feature/shiftsSlice";
 import { fetchBusinessOverviewRequest } from "../api/aiApi";
 import { analyzeBusinessOverviewLocal } from "../utils/businessOverviewAnalyzer";
+import { businessOverviewFingerprint } from "../utils/aiDataFingerprint";
+import { useAiApiAutoRefresh } from "../hooks/useAiApiAutoRefresh";
+import { useSalesCommercialInsights } from "../hooks/useSalesCommercialInsights";
 
 import DashboardKpiRow from "../components/dashboard/DashboardKpiRow";
-import BusinessOverviewPanel from "../components/dashboard/BusinessOverviewPanel";
-import SalesTrendChart from "../components/dashboard/SalesTrendChart";
+import BusinessOverviewPanel, {
+  OVERVIEW_ALERTS_LIMIT_OPS,
+} from "../components/dashboard/BusinessOverviewPanel";
+import SalesCommercialAiPanel from "../components/dashboard/SalesCommercialAiPanel";
+import SalesTrendChart, {
+  SalesTrendPeriodFilters,
+} from "../components/dashboard/SalesTrendChart";
+import { DEFAULT_SALES_TREND_MONTHS } from "../utils/salesTrend";
 import DashboardCalendar from "../components/dashboard/DashboardCalendar";
 import CompanyDocumentsSection from "../components/dashboard/CompanyDocumentsSection";
 import { hasAnyShift } from "../utils/shiftPeriods";
@@ -50,7 +59,6 @@ const BoardPage = () => {
   const warehouseItems = useSelector((state) => state.items.list) || [];
   const shifts = useSelector((state) => state.shifts.list) || [];
   const userShifts = useSelector((state) => state.shifts.current);
-  const users = useSelector((state) => state.users.list) || [];
 
   const dataSnapshotRef = useRef({ items: [], orders: [], tickets: [], shifts: [] });
 
@@ -77,11 +85,40 @@ const BoardPage = () => {
     });
   }, [warehouseItems, userWorkplaceId, isAdmin]);
 
+  const coreDataReady =
+    !isAdmin ||
+    (!ordersLoading && itemsStatus !== "loading" && itemsStatus !== "idle");
+
   const [overviewData, setOverviewData] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState("");
   const [overviewOffline, setOverviewOffline] = useState(false);
-  const overviewAutoLoadedRef = useRef(false);
+  const overviewApiOkRef = useRef(false);
+
+  const overviewFingerprint = useMemo(
+    () =>
+      businessOverviewFingerprint({
+        orders: scopedOrders,
+        tickets,
+        items: scopedItems,
+        shifts,
+      }),
+    [scopedOrders, tickets, scopedItems, shifts]
+  );
+
+  const {
+    data: salesInsightsData,
+    loading: salesInsightsLoading,
+    error: salesInsightsError,
+    offline: salesInsightsOffline,
+    source: salesInsightsSource,
+  } = useSalesCommercialInsights({
+    enabled: isAdmin,
+    orders: scopedOrders,
+    customers: customers ?? [],
+    items: scopedItems,
+    dataReady: coreDataReady,
+  });
 
   dataSnapshotRef.current = {
     items: scopedItems,
@@ -89,10 +126,6 @@ const BoardPage = () => {
     tickets,
     shifts,
   };
-
-  const coreDataReady =
-    !isAdmin ||
-    (!ordersLoading && itemsStatus !== "loading" && itemsStatus !== "idle");
 
   const textColor = theme === "dark" ? "text-white" : "text-[#090c64]";
 
@@ -125,31 +158,48 @@ const BoardPage = () => {
 
   const loadBusinessOverview = useCallback(async () => {
     if (!token || !isAdmin) return;
+
+    const local = analyzeBusinessOverviewLocal(dataSnapshotRef.current);
+    if (!overviewApiOkRef.current) {
+      setOverviewData(local);
+    }
     setOverviewLoading(true);
     setOverviewError("");
+
     try {
       const data = await fetchBusinessOverviewRequest(token);
       setOverviewData(data);
+      overviewApiOkRef.current = true;
       setOverviewOffline(false);
     } catch {
-      setOverviewData(analyzeBusinessOverviewLocal(dataSnapshotRef.current));
+      overviewApiOkRef.current = false;
+      setOverviewData(local);
       setOverviewOffline(true);
-      setOverviewError("");
     } finally {
       setOverviewLoading(false);
     }
   }, [token, isAdmin]);
 
   useEffect(() => {
-    overviewAutoLoadedRef.current = false;
+    overviewApiOkRef.current = false;
+    setOverviewOffline(false);
   }, [token]);
 
+  useAiApiAutoRefresh({
+    enabled: isAdmin && Boolean(token),
+    dataReady: coreDataReady,
+    fingerprint: overviewFingerprint,
+    onRefresh: loadBusinessOverview,
+  });
+
   useEffect(() => {
-    if (isAdmin && token && coreDataReady && !overviewAutoLoadedRef.current) {
-      overviewAutoLoadedRef.current = true;
-      loadBusinessOverview();
+    if (!isAdmin || !token) return;
+
+    const local = analyzeBusinessOverviewLocal(dataSnapshotRef.current);
+    if (!overviewApiOkRef.current || overviewOffline) {
+      setOverviewData(local);
     }
-  }, [isAdmin, token, coreDataReady, loadBusinessOverview]);
+  }, [isAdmin, token, scopedItems, scopedOrders, tickets, shifts, overviewOffline]);
 
   const kpiMetrics = useMemo(() => {
     const now = Date.now();
@@ -192,20 +242,44 @@ const BoardPage = () => {
     };
   }, [scopedOrders, tickets, scopedItems, shifts, userShifts, isAdmin]);
 
+  const [salesTrendMonths, setSalesTrendMonths] = useState(DEFAULT_SALES_TREND_MONTHS);
+
+  const salesInsightsPanelProps = {
+    data: salesInsightsData,
+    loading: salesInsightsLoading,
+    error: salesInsightsError,
+    source: salesInsightsSource,
+    offlineHint: salesInsightsOffline,
+  };
+
   const salesChartSection = (
-    <section className={`app-surface flex flex-col gap-3 p-4 min-w-0 w-full ${textColor}`}>
-      <div className="dashboard-card-header flex items-center gap-3">
-        <ChartLineUpIcon
-          size={24}
-          color={theme === "dark" ? "white" : "#090c64"}
-          weight="duotone"
+    <section
+      id="dashboard-sales"
+      className={`app-surface dashboard-operations-hub__chart p-4 min-w-0 ${textColor}`}
+    >
+      <div className="sales-trend-header">
+        <div className="dashboard-card-header min-w-0">
+          <div className="panel-header-leading panel-header-leading--single">
+            <ChartLineUpIcon
+              size={24}
+              color={theme === "dark" ? "white" : "#090c64"}
+              weight="duotone"
+              className="preserve-icon-size shrink-0"
+            />
+            <h3 className="text-sm font-bold">{t("andamentoVendite")}</h3>
+          </div>
+        </div>
+        <SalesTrendPeriodFilters
+          value={salesTrendMonths}
+          onChange={setSalesTrendMonths}
+          t={t}
         />
-        <h3 className="text-sm font-bold">{t("andamentoVendite")}</h3>
       </div>
       <SalesTrendChart
         orders={scopedOrders}
         customers={customers ?? []}
         theme={theme}
+        monthsCount={salesTrendMonths}
       />
     </section>
   );
@@ -218,27 +292,38 @@ const BoardPage = () => {
     >
       {isAdmin && <DashboardKpiRow {...kpiMetrics} isAdmin={isAdmin} />}
 
-      {isAdmin && (
-        <BusinessOverviewPanel
-          data={overviewData}
-          loading={overviewLoading}
-          error={overviewError}
-          source={overviewOffline ? "heuristic" : overviewData?.source}
-          offlineHint={overviewOffline}
-          onRefresh={loadBusinessOverview}
-        />
-      )}
-
       {isAdmin ? (
-        <>
-          {salesChartSection}
+        <div className="dashboard-operations-hub">
+          <div className="dashboard-operations-hub__top">
+            <BusinessOverviewPanel
+              data={overviewData}
+              loading={overviewLoading}
+              error={overviewError}
+              source={overviewOffline ? "heuristic" : overviewData?.source}
+              alertsInitialLimit={OVERVIEW_ALERTS_LIMIT_OPS}
+              className="dashboard-operations-hub__overview"
+            />
+            <div
+              id="dashboard-documents"
+              className="dashboard-operations-hub__documents min-w-0"
+            >
+              <CompanyDocumentsSection canManage={isAdmin} />
+            </div>
+          </div>
+
           <div id="dashboard-calendar">
             <DashboardCalendar canManage={isAdmin} />
           </div>
-          <div id="dashboard-documents">
-            <CompanyDocumentsSection canManage={isAdmin} />
+
+          <div className="dashboard-operations-hub__sales-row">
+            {salesChartSection}
+            <SalesCommercialAiPanel
+              {...salesInsightsPanelProps}
+              section="insights"
+              className="dashboard-operations-hub__insights"
+            />
           </div>
-        </>
+        </div>
       ) : (
         <>
           <div id="dashboard-calendar">

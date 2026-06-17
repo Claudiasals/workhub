@@ -100,9 +100,7 @@ const OrdersTable = ({
         <table className="table-base orders-table-base">
           <thead>
             <tr>
-              {columns.map((item, idx) => {
-                const isCentered = centeredCols.includes(item);
-                return (
+              {columns.map((item, idx) => (
                   <th
                     key={idx}
                     className={`
@@ -112,19 +110,14 @@ const OrdersTable = ({
                           ? "rounded-r-xl"
                           : ""
                       }
-                      ${
-                        isCentered
-                          ? "orders-cell-center"
-                          : "orders-cell-left"
-                    }`}
+                    `}
                   >
                     {columnsLabels[item] ?? t(item)}
                   </th>
-                );
-              })}
+                ))}
 
               {actionLabel && (
-                <th className="rounded-r-xl orders-cell-center">
+                <th className="rounded-r-xl">
                   {actionLabel}
                 </th>
               )}

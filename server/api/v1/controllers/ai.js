@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { Item, Order, Shift, Leave, User } from "../../../db/index.js";
+import { Item, Order, Shift, Leave, User, Client } from "../../../db/index.js";
 import { formatResponse } from "../../../utils/format.js";
 import { handleRouteErrors } from "../../../utils/error.js";
 import {
@@ -190,6 +190,33 @@ export const postGenerateCommunication = async (req, res) => {
 
 export const postDashboardInsights = async (req, res) => {
   return postBusinessOverview(req, res);
+};
+
+export const postSalesInsights = async (req, res) => {
+  try {
+    const { getSalesCommercialInsights } = await import(
+      "../services/salesInsights/SalesCommercialInsightsService.js"
+    );
+
+    const [items, orders, customers] = await Promise.all([
+      Item.find()
+        .populate({ path: "product", populate: { path: "category" } })
+        .populate("pointOfSales")
+        .lean(),
+      Order.find()
+        .populate({ path: "product", populate: { path: "category" } })
+        .populate("pointOfSales")
+        .lean(),
+      Client.find().lean(),
+    ]);
+
+    const result = getSalesCommercialInsights({ items, orders, customers });
+    return res
+      .status(200)
+      .json(formatResponse(result, true, "Sales commercial insights generated"));
+  } catch (err) {
+    return handleRouteErrors(res, { error: err });
+  }
 };
 
 export const postBusinessOverview = async (req, res) => {

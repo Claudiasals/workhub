@@ -4,6 +4,7 @@ import { TrashIcon } from "@phosphor-icons/react";
 
 import Drawer from "../components/Drawer";
 import OrdersTable from "../components/Orders/OrdersTable";
+import { OrdersReorderInsightsPanel } from "../components/Orders/OrdersReorderInsightsPanel";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -183,7 +184,7 @@ const OrderPage = () => {
   };
 
   return (
-    <div className="w-full pb-6 flex flex-col gap-6">
+    <div className="page-section-stack page-section-stack--relaxed w-full pb-6">
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -383,6 +384,8 @@ const OrderPage = () => {
           </div>
         </div>
       )}
+
+      <OrdersReorderInsightsPanel token={token} />
 
       <OrdersTable
         data={ordersForTable}

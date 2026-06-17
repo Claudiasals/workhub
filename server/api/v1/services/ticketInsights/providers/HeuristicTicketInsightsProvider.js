@@ -247,8 +247,8 @@ export class HeuristicTicketInsightsProvider {
     if (insights.length === 0 && normalized.length > 0) {
       insights.push(
         insight(
-          "Panoramica ticket",
-          `${openCount} aperti e ${closedCount} risolti nel dataset analizzato. Continua a monitorare le categorie principali.`
+          "Trend ticket",
+          `${openCount} aperti e ${closedCount} risolti nel dataset analizzato.`
         )
       );
     }

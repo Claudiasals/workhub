@@ -137,18 +137,11 @@ export function CustomerAiInsightsCard({
             </div>
             <AiBadge source={data?.source} />
           </div>
-          <div className="flex gap-2">
-            {!compact && (
-              <button type="button" onClick={loadInsights} disabled={loading} className="custom-button-light text-xs">
-                {t("aiRefresh")}
-              </button>
-            )}
-            {compact && onDismiss && (
-              <button type="button" onClick={onDismiss} className="custom-button-light text-xs">
-                {t("customerAiDismiss")}
-              </button>
-            )}
-          </div>
+          {compact && onDismiss && (
+            <button type="button" onClick={onDismiss} className="custom-button-light text-xs">
+              {t("customerAiDismiss")}
+            </button>
+          )}
         </div>
 
         {loading && !data && <AiLoadingIndicator className="mt-2" />}
@@ -202,15 +195,16 @@ export function CustomerAiInsightsCard({
               {t("customerAiPromotionsTitle")}
             </h4>
             {data.promotions.length > 1 && !compact && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="customer-ai-promo-tabs">
                 {data.promotions.map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => setPromoIndex(i)}
-                    className={`ticket-ai-priority-filters__btn text-xs${
+                    className={`customer-ai-promo-tabs__btn${
                       promoIndex === i ? " is-active" : ""
                     }`}
+                    aria-pressed={promoIndex === i}
                   >
                     {t("customerAiPromoOption").replace("{n}", String(i + 1))}
                   </button>

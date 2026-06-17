@@ -5,17 +5,6 @@
   isolation: isolate;
 }
 
-.ticket-ai-insights-wrap {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 0;
-}
-
-.ticket-ai-insights-wrap + .app-surface {
-  position: relative;
-  z-index: 2;
-}
-
 .ticket-ai-insights-panel {
   display: flex;
   flex-direction: column;
@@ -28,6 +17,26 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.ticket-ai-insights-panel__grid--compact {
+  gap: 0.75rem;
+}
+
+.ticket-ai-insights-panel__column--compact {
+  border: none;
+  background: transparent;
+  padding: 0;
+  gap: 0.375rem;
+}
+
+.ticket-ai-insights-panel__column--compact .ticket-ai-insights-panel__subtitle {
+  margin-bottom: 0.125rem;
+}
+
+.ticket-ai-insights-panel__grid--compact .ai-alert-list-wrap:empty,
+.ticket-ai-insights-panel__grid--compact .ticket-insights-empty {
+  margin: 0;
 }
 
 .ticket-ai-insights-panel__grid {

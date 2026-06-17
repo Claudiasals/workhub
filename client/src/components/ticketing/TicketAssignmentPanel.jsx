@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { BuildingsIcon, SparkleIcon } from "@phosphor-icons/react";
 import { useLanguage } from "../../context/LanguageContext";
-import { useTheme } from "../../context/ThemeContext";
 import {
   AI_CATEGORIES,
   TICKET_DEPARTMENT_LABEL_KEYS,
@@ -15,11 +14,10 @@ export function TicketAssignmentPanel({
   ticket,
   isDemoMode = false,
   onAssigned,
+  className = "",
 }) {
   const dispatch = useDispatch();
   const { t } = useLanguage();
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
 
   const [department, setDepartment] = useState(ticket?.assignedDepartment || "");
   const [saving, setSaving] = useState(false);
@@ -75,86 +73,102 @@ export function TicketAssignmentPanel({
 
   const currentLabelKey = getTicketDepartmentLabelKey(ticket?.assignedDepartment);
   const selectedLabelKey = getTicketDepartmentLabelKey(department);
+  const suggestedLabelKey = canApplySuggestion
+    ? getTicketDepartmentLabelKey(suggestedCategory)
+    : null;
 
   return (
-    <section
-      className={`ticket-assignment-panel rounded-xl border p-3 mt-3 ${
-        isDark ? "border-white/20 bg-white/5" : "border-gray-200 bg-white/60"
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <BuildingsIcon size={20} weight="duotone" />
-        <h4 className="text-sm font-bold">{t("ticketAssignTitle")}</h4>
+    <section className={`ticket-drawer-section ticket-assignment-panel ${className}`.trim()}>
+      <div className="ticket-assignment-panel__header">
+        <div className="ticket-drawer-section__heading">
+          <BuildingsIcon size={18} weight="duotone" />
+          <h4 className="ticket-drawer-section__label">{t("ticketAssignTitle")}</h4>
+        </div>
+
+        {currentLabelKey ? (
+          <p className="ticket-assignment-panel__current">
+            {t("ticketAssignedDepartment")}:{" "}
+            <span className="ticket-assignment-panel__current-value">{t(currentLabelKey)}</span>
+          </p>
+        ) : (
+          <p className="ticket-assignment-panel__current ticket-assignment-panel__current--empty">
+            {t("ticketAssignNone")}
+          </p>
+        )}
       </div>
 
-      {currentLabelKey ? (
-        <p className="text-xs mb-2 opacity-80">
-          {t("ticketAssignedDepartment")}:{" "}
-          <span className="font-bold">{t(currentLabelKey)}</span>
-        </p>
-      ) : (
-        <p className="text-xs mb-2 opacity-70">{t("ticketAssignNone")}</p>
-      )}
-
-      {canApplySuggestion && (
-        <div
-          className={`rounded-lg p-2 mb-3 text-xs leading-relaxed ${
-            isDark ? "bg-white/10" : "bg-blue-50/80"
-          }`}
-        >
-          <div className="flex items-center gap-1 font-bold mb-1">
-            <SparkleIcon size={14} weight="duotone" />
-            {t("aiSuggestion")}
+      <div
+        className={`ticket-assignment-panel__grid${
+          canApplySuggestion ? " ticket-assignment-panel__grid--with-suggestion" : ""
+        }`}
+      >
+        {canApplySuggestion && (
+          <div className="ticket-assignment-panel__suggestion">
+            <div className="ticket-assignment-panel__suggestion-head">
+              <SparkleIcon size={14} weight="duotone" />
+              <span>{t("aiSuggestion")}</span>
+            </div>
+            <p className="ticket-assignment-panel__suggestion-text">
+              {ticket.aiClassification.adminSuggestion ||
+                t(suggestedLabelKey || "aiCatAltro")}
+            </p>
+            <button
+              type="button"
+              className="custom-button-light ticket-assignment-panel__suggestion-btn"
+              onClick={handleApplySuggestion}
+            >
+              {t("ticketApplyAiAssignment")}
+              {suggestedLabelKey ? `: ${t(suggestedLabelKey)}` : ""}
+            </button>
           </div>
-          <p className="opacity-90">
-            {ticket.aiClassification.adminSuggestion ||
-              t(suggestedCategory ? getTicketDepartmentLabelKey(suggestedCategory) : "aiCatAltro")}
-          </p>
-          <button
-            type="button"
-            className="custom-button-light text-xs mt-2"
-            onClick={handleApplySuggestion}
-          >
-            {t("ticketApplyAiAssignment")}: {t(getTicketDepartmentLabelKey(suggestedCategory))}
-          </button>
+        )}
+
+        <div className="ticket-assignment-panel__form">
+          <label className="drawer-label ticket-assignment-panel__label">
+            {t("ticketAssignSelect")}
+          </label>
+
+          <div className="ticket-assignment-panel__controls">
+            <select
+              className="custom-input ticket-assignment-panel__select"
+              value={department}
+              onChange={(e) => {
+                setDepartment(e.target.value);
+                setFeedback("");
+              }}
+            >
+              <option value="">{t("ticketAssignSelectPlaceholder")}</option>
+              {AI_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {t(TICKET_DEPARTMENT_LABEL_KEYS[cat])}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className="custom-button ticket-assignment-panel__save"
+              disabled={!department || saving || department === ticket?.assignedDepartment}
+              onClick={handleSave}
+            >
+              {saving ? t("aiLoading") : t("ticketAssignSave")}
+            </button>
+          </div>
+
+          {(feedback || (selectedLabelKey && department !== ticket?.assignedDepartment)) && (
+            <div className="ticket-assignment-panel__meta">
+              {feedback && (
+                <p className="ticket-assignment-panel__feedback">{feedback}</p>
+              )}
+              {selectedLabelKey && department !== ticket?.assignedDepartment && (
+                <p className="ticket-assignment-panel__pending">
+                  {t("ticketAssignPending")}: {t(selectedLabelKey)}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-      )}
-
-      <label className="drawer-label text-xs mb-1 block">{t("ticketAssignSelect")}</label>
-      <select
-        className="custom-input w-full text-sm mb-3"
-        value={department}
-        onChange={(e) => {
-          setDepartment(e.target.value);
-          setFeedback("");
-        }}
-      >
-        <option value="">{t("ticketAssignSelectPlaceholder")}</option>
-        {AI_CATEGORIES.map((cat) => (
-          <option key={cat} value={cat}>
-            {t(TICKET_DEPARTMENT_LABEL_KEYS[cat])}
-          </option>
-        ))}
-      </select>
-
-      <button
-        type="button"
-        className="custom-button w-full text-sm"
-        disabled={!department || saving || department === ticket?.assignedDepartment}
-        onClick={handleSave}
-      >
-        {saving ? t("aiLoading") : t("ticketAssignSave")}
-      </button>
-
-      {feedback && (
-        <p className="text-xs mt-2 font-semibold opacity-90">{feedback}</p>
-      )}
-
-      {selectedLabelKey && department !== ticket?.assignedDepartment && (
-        <p className="text-xs mt-2 opacity-70">
-          {t("ticketAssignPending")}: {t(selectedLabelKey)}
-        </p>
-      )}
+      </div>
     </section>
   );
 }

@@ -1,24 +1,14 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  WarningCircleIcon,
   WarningIcon,
-  InfoIcon,
   LightbulbIcon,
   SparkleIcon,
-  CheckCircleIcon,
   ArrowRightIcon,
 } from "@phosphor-icons/react";
 import { AiBadge, AiLoadingIndicator } from "../ai/AiInsightPanel";
 import { useLanguage } from "../../context/LanguageContext";
 import { useTheme } from "../../context/ThemeContext";
-
-const alertIconMap = {
-  critical: WarningCircleIcon,
-  warning: WarningIcon,
-  info: InfoIcon,
-  success: CheckCircleIcon,
-};
 
 const urgencyClassMap = {
   critical: "business-overview-item--urgency-alta",
@@ -68,13 +58,29 @@ function getAreaActionRoute(item) {
 }
 
 const OVERVIEW_INITIAL_LIMIT = 2;
+const OVERVIEW_ALERTS_LIMIT_OPS = 3;
 
-function OverviewList({ items, variant, t }) {
+const ALERT_URGENCY_ORDER = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+  success: 3,
+};
+
+function sortAlertsByUrgency(items = []) {
+  return [...items].sort((a, b) => {
+    const orderA = ALERT_URGENCY_ORDER[a.type] ?? 2;
+    const orderB = ALERT_URGENCY_ORDER[b.type] ?? 2;
+    return orderA - orderB;
+  });
+}
+
+function OverviewList({ items, variant, t, initialLimit = OVERVIEW_INITIAL_LIMIT }) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setExpanded(false);
-  }, [items?.length, variant]);
+  }, [items?.length, variant, initialLimit]);
 
   if (!items?.length) {
     return (
@@ -86,10 +92,13 @@ function OverviewList({ items, variant, t }) {
     );
   }
 
-  const hasHidden = items.length > OVERVIEW_INITIAL_LIMIT;
+  const hasHidden = items.length > initialLimit;
   const visibleItems = expanded
     ? items
-    : items.slice(0, OVERVIEW_INITIAL_LIMIT);
+    : items.slice(0, initialLimit);
+  const visibleSlotCount = expanded
+    ? items.length
+    : Math.max(1, Math.min(items.length, initialLimit));
 
   return (
     <div className="business-overview-list-wrap">
@@ -97,21 +106,13 @@ function OverviewList({ items, variant, t }) {
         className={`business-overview-list${
           expanded ? " business-overview-list--expanded" : ""
         }`}
+        style={{ "--overview-visible-count": visibleSlotCount }}
       >
-        {visibleItems.map((item, index) => {
-          const Icon =
-            variant === "alert"
-              ? alertIconMap[item.type] || InfoIcon
-              : LightbulbIcon;
-
-          return (
+        {visibleItems.map((item, index) => (
             <li
               key={`${item.title}-${index}`}
               className={`business-overview-item ${getUrgencyClass(item, variant)}`}
             >
-              <span className="business-overview-item__icon" aria-hidden="true">
-                <Icon size={16} weight="duotone" />
-              </span>
               <div className="business-overview-item__body">
                 {item.area ? (
                   <div className="business-overview-item__meta">
@@ -139,8 +140,7 @@ function OverviewList({ items, variant, t }) {
                 ) : null}
               </div>
             </li>
-          );
-        })}
+        ))}
       </ul>
 
       {hasHidden ? (
@@ -154,7 +154,7 @@ function OverviewList({ items, variant, t }) {
             ? t("aiShowLess")
             : t("aiShowMore").replace(
                 "{count}",
-                String(items.length - OVERVIEW_INITIAL_LIMIT)
+                String(items.length - initialLimit)
               )}
         </button>
       ) : null}
@@ -166,10 +166,10 @@ export function BusinessOverviewPanel({
   data,
   loading = false,
   error = "",
-  onRefresh,
   source,
-  offlineHint = false,
   className = "",
+  alertsInitialLimit = OVERVIEW_INITIAL_LIMIT,
+  insightsInitialLimit = OVERVIEW_INITIAL_LIMIT,
 }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
@@ -177,20 +177,24 @@ export function BusinessOverviewPanel({
   const iconColor = theme === "dark" ? "white" : "#090c64";
   const hasData = Boolean(data?.alerts?.length || data?.insights?.length);
   const showGrid = !error && (!loading || hasData);
+  const sortedAlerts = useMemo(
+    () => sortAlertsByUrgency(data?.alerts || []),
+    [data?.alerts]
+  );
 
   return (
     <section
       className={`app-surface business-overview-panel p-4 min-w-0 w-full ${textColor}${className ? ` ${className}` : ""}`}
     >
       <div className="business-overview-panel__header">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="panel-header-leading min-w-0 flex-1">
           <SparkleIcon
             size={24}
             weight="duotone"
             color={iconColor}
             className="preserve-icon-size shrink-0"
           />
-          <div className="min-w-0">
+          <div className="panel-header-leading__text min-w-0">
             <h2 className="text-sm font-bold leading-tight">
               {t("businessOverviewTitle")}
             </h2>
@@ -200,23 +204,9 @@ export function BusinessOverviewPanel({
           </div>
           <AiBadge source={source} />
         </div>
-        {onRefresh && (
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            className="custom-button text-sm"
-          >
-            {t("aiRefresh")}
-          </button>
-        )}
       </div>
 
       {loading && !data && <AiLoadingIndicator className="business-overview-loading" />}
-
-      {offlineHint && !loading && (
-        <p className="business-overview-offline-hint">{t("businessOverviewOffline")}</p>
-      )}
 
       {error && !loading && (
         <p className="business-overview-error">{error}</p>
@@ -224,19 +214,29 @@ export function BusinessOverviewPanel({
 
       {showGrid && (
         <div className="business-overview-panel__grid">
-          <div className="business-overview-panel__column">
+          <div className="business-overview-panel__column business-overview-panel__column--alerts">
             <h3 className="business-overview-panel__subtitle">
               <WarningIcon size={18} weight="duotone" />
               {t("businessOverviewAlertsTitle")}
             </h3>
-            <OverviewList items={data?.alerts} variant="alert" t={t} />
+            <OverviewList
+              items={sortedAlerts}
+              variant="alert"
+              t={t}
+              initialLimit={alertsInitialLimit}
+            />
           </div>
-          <div className="business-overview-panel__column">
+          <div className="business-overview-panel__column business-overview-panel__column--insights">
             <h3 className="business-overview-panel__subtitle">
               <LightbulbIcon size={18} weight="duotone" />
               {t("businessOverviewInsightsTitle")}
             </h3>
-            <OverviewList items={data?.insights} variant="insight" t={t} />
+            <OverviewList
+              items={data?.insights}
+              variant="insight"
+              t={t}
+              initialLimit={insightsInitialLimit}
+            />
           </div>
         </div>
       )}
@@ -244,4 +244,5 @@ export function BusinessOverviewPanel({
   );
 }
 
+export { OVERVIEW_ALERTS_LIMIT_OPS };
 export default BusinessOverviewPanel;

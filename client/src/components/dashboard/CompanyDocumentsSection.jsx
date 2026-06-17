@@ -3,8 +3,6 @@ import { useSelector } from "react-redux";
 import {
   FileTextIcon,
   MagnifyingGlassIcon,
-  TagIcon,
-  PlusCircleIcon,
   PencilSimpleIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -16,6 +14,7 @@ import {
   loadCompanyDocuments,
   saveCompanyDocuments,
   createDocumentId,
+  sortCompanyDocumentsByNewest,
 } from "../../utils/companyDocumentsStorage";
 import { markDocumentReadInNotifications } from "../../utils/notificationStorage";
 
@@ -24,6 +23,8 @@ const importanceClass = {
   important: "doc-importance--important",
   normal: "doc-importance--normal",
 };
+
+export const COMPANY_DOCS_INITIAL_LIMIT = 4;
 
 const emptyForm = () => ({
   id: null,
@@ -35,7 +36,10 @@ const emptyForm = () => ({
   content: "",
 });
 
-export function CompanyDocumentsSection({ canManage = false }) {
+export function CompanyDocumentsSection({
+  canManage = false,
+  initialLimit = COMPANY_DOCS_INITIAL_LIMIT,
+}) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const authUser = useSelector((state) => state.auth.user);
@@ -49,6 +53,7 @@ export function CompanyDocumentsSection({ canManage = false }) {
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(emptyForm());
   const [docToDelete, setDocToDelete] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     saveCompanyDocuments(documents);
@@ -64,15 +69,40 @@ export function CompanyDocumentsSection({ canManage = false }) {
   };
 
   const filtered = useMemo(() => {
+    const sorted = sortCompanyDocumentsByNewest(documents);
     const q = search.trim().toLowerCase();
-    if (!q) return documents;
-    return documents.filter(
+    if (!q) return sorted;
+    return sorted.filter(
       (doc) =>
         doc.title.toLowerCase().includes(q) ||
         doc.category.toLowerCase().includes(q) ||
         doc.author.toLowerCase().includes(q)
     );
   }, [search, documents]);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [search, filtered.length, initialLimit]);
+
+  const visibleDocs = expanded ? filtered : filtered.slice(0, initialLimit);
+  const hasHidden = filtered.length > initialLimit;
+
+  const showMoreButton =
+    hasHidden && filtered.length > 0 ? (
+      <button
+        type="button"
+        className="ai-alert-toggle"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+      >
+        {expanded
+          ? t("aiShowLess")
+          : t("aiShowMore").replace(
+              "{count}",
+              String(filtered.length - initialLimit)
+            )}
+      </button>
+    ) : null;
 
   const openCreate = () => {
     setFormData(emptyForm());
@@ -93,10 +123,16 @@ export function CompanyDocumentsSection({ canManage = false }) {
         prev.map((d) => (d.id === formData.id ? { ...formData } : d))
       );
     } else {
-      setDocuments((prev) => [
-        ...prev,
-        { ...formData, id: createDocumentId() },
-      ]);
+      setDocuments((prev) =>
+        sortCompanyDocumentsByNewest([
+          {
+            ...formData,
+            id: createDocumentId(),
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ])
+      );
     }
     setFormOpen(false);
     setFormData(emptyForm());
@@ -108,12 +144,31 @@ export function CompanyDocumentsSection({ canManage = false }) {
     setDocToDelete(null);
   };
 
+  const formatDocDate = (value) =>
+    new Date(value).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+  const renderImportanceBadge = (importance) => (
+    <span
+      className={`company-doc-importance ${
+        importanceClass[importance] || importanceClass.normal
+      }`}
+    >
+      {t(`docImportance_${importance}`)}
+    </span>
+  );
+
   return (
     <>
       <section className={`app-surface company-docs-section p-4 min-w-0 w-full ${textColor}`}>
-        <div className="dashboard-card-header flex items-center gap-3 min-w-0 w-full mb-4">
-          <FileTextIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
-          <h3 className="text-sm font-bold shrink-0">{t("companyDocsTitle")}</h3>
+        <div className="dashboard-card-header company-docs-section__header min-w-0 w-full">
+          <div className="panel-header-leading panel-header-leading--single shrink-0">
+            <FileTextIcon size={24} color={iconColor} weight="duotone" className="shrink-0" />
+            <h3 className="text-sm font-bold">{t("companyDocsTitle")}</h3>
+          </div>
           <div className="card-toolbar-actions ml-auto">
             <div className="relative">
               <MagnifyingGlassIcon
@@ -130,65 +185,95 @@ export function CompanyDocumentsSection({ canManage = false }) {
             </div>
             {canManage && (
               <button type="button" onClick={openCreate} className="custom-button text-sm shrink-0">
-                + {t("aggiungi")}
+                + {t("companyDocsNew")}
               </button>
             )}
           </div>
         </div>
 
-        <div className="company-docs-grid">
-          {filtered.map((doc) => (
-            <article key={doc.id} className="company-doc-card">
-              <div className="company-doc-card__head">
-                <FileTextIcon size={20} weight="duotone" color={iconColor} />
-                <span
-                  className={`company-doc-importance ${
-                    importanceClass[doc.importance] || importanceClass.normal
-                  }`}
-                >
-                  {t(`docImportance_${doc.importance}`)}
-                </span>
-              </div>
-              <h4 className="company-doc-card__title">{doc.title}</h4>
-              <p className="company-doc-card__meta">
-                <TagIcon size={14} />
-                {doc.category}
-              </p>
-              <p className="company-doc-card__meta">
-                {new Date(doc.publishedAt).toLocaleDateString("it-IT")} · {doc.author}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-auto">
-                <button
-                  type="button"
-                  className="custom-button company-doc-card__btn"
-                  onClick={() => openDocument(doc)}
-                >
-                  {t("companyDocsRead")}
-                </button>
-                {canManage && (
-                  <>
-                    <button
-                      type="button"
-                      className="custom-button-light text-xs px-3 py-1"
-                      onClick={() => openEdit(doc)}
-                      aria-label={t("modifica")}
-                    >
-                      <PencilSimpleIcon size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="text-red-500 px-2"
-                      onClick={() => setDocToDelete(doc)}
-                      aria-label={t("elimina")}
-                    >
-                      <TrashIcon size={18} weight="duotone" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
+        {canManage ? (
+          <div className="company-docs-list-wrap">
+            {filtered.length === 0 ? (
+              <p className="company-docs-empty">{t("nessunRisultatoTrovato")}</p>
+            ) : (
+              <>
+                <ul className="company-docs-list">
+                  {visibleDocs.map((doc) => (
+                  <li key={doc.id} className="company-docs-list__item">
+                    <div className="company-docs-list__main min-w-0">
+                      <div className="company-docs-list__copy min-w-0">
+                        <p className="company-docs-list__title">{doc.title}</p>
+                        <p className="company-docs-list__meta">
+                          {doc.category || "—"} · {formatDocDate(doc.publishedAt)} ·{" "}
+                          {doc.author || "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="company-docs-list__badge">
+                      {renderImportanceBadge(doc.importance)}
+                    </div>
+
+                    <div className="company-docs-list__actions">
+                      <button
+                        type="button"
+                        className="custom-button company-docs-list__read-btn"
+                        onClick={() => openDocument(doc)}
+                      >
+                        {t("companyDocsRead")}
+                      </button>
+                      <button
+                        type="button"
+                        className="custom-button-light company-docs-list__icon-btn"
+                        onClick={() => openEdit(doc)}
+                        aria-label={t("modifica")}
+                      >
+                        <PencilSimpleIcon size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="company-docs-list__icon-btn company-docs-list__icon-btn--danger"
+                        onClick={() => setDocToDelete(doc)}
+                        aria-label={t("elimina")}
+                      >
+                        <TrashIcon size={18} weight="duotone" />
+                      </button>
+                    </div>
+                  </li>
+                  ))}
+                </ul>
+                {showMoreButton}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="company-docs-list-wrap">
+            <div className="company-docs-grid">
+              {visibleDocs.map((doc) => (
+              <article key={doc.id} className="company-doc-card">
+                <div className="company-doc-card__head">
+                  {renderImportanceBadge(doc.importance)}
+                </div>
+                <h4 className="company-doc-card__title">{doc.title}</h4>
+                <p className="company-doc-card__meta">{doc.category}</p>
+                <p className="company-doc-card__meta">
+                  {formatDocDate(doc.publishedAt)} · {doc.author}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-auto">
+                  <button
+                    type="button"
+                    className="custom-button company-doc-card__btn"
+                    onClick={() => openDocument(doc)}
+                  >
+                    {t("companyDocsRead")}
+                  </button>
+                </div>
+              </article>
+              ))}
+            </div>
+            {filtered.length > 0 ? showMoreButton : null}
+          </div>
+        )}
       </section>
 
       <Drawer

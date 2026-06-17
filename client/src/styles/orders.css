@@ -1,5 +1,5 @@
 .orders-table {
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   background: rgba(250, 250, 250, 0.125);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -40,7 +40,7 @@
 
 .orders-search {
   padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   border: 1px solid white;
   background-color: rgba(255, 255, 255, 0.7);
   font-size: 0.875rem;
@@ -67,7 +67,7 @@
 
 .orders-table-wrapper {
   overflow-x: auto;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
 }
 
 .orders-table-el {
@@ -79,6 +79,20 @@
 .orders-table-el th,
 .orders-table-el td {
   padding: 0.75rem;
+}
+
+.orders-table-el thead th {
+  height: 41px;
+  padding: 0 0.75rem;
+  line-height: 1.15;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.orders-table-el tbody td {
+  text-align: center;
 }
 
 .orders-table-el thead tr {
@@ -119,7 +133,7 @@
 
 .order-product img {
   max-width: 140px;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
 }
 
 .clients-grid {
@@ -129,7 +143,7 @@
 }
 
 .client-card {
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   padding: 1rem;
   background: rgba(250, 250, 250, 0.125);
   border: 1px solid rgba(255, 255, 255, 0.3);

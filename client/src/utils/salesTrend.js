@@ -6,6 +6,11 @@ import {
 } from "date-fns";
 import { it, enGB } from "date-fns/locale";
 
+import { getDemoSalesForMonthKey } from "./demoSalesMonthly.js";
+
+export const SALES_TREND_MONTH_OPTIONS = [3, 6, 12];
+export const DEFAULT_SALES_TREND_MONTHS = 6;
+
 export const getOrderRevenue = (order) => {
   const unitPrice = Number(order.product?.price) || 0;
 
@@ -23,19 +28,11 @@ export const getOrderRevenue = (order) => {
   return quantity * unitPrice;
 };
 
-const DEMO_MONTHLY_SALES = [
-  { orders: 6, revenue: 2840, newClients: 3 },
-  { orders: 8, revenue: 3920, newClients: 5 },
-  { orders: 7, revenue: 3150, newClients: 4 },
-  { orders: 11, revenue: 5280, newClients: 7 },
-  { orders: 9, revenue: 4410, newClients: 6 },
-  { orders: 14, revenue: 6720, newClients: 9 },
-];
-
-const buildMonthBuckets = (lang = "it") => {
+const buildMonthBuckets = (lang = "it", monthsCount = DEFAULT_SALES_TREND_MONTHS) => {
   const locale = lang === "it" ? it : enGB;
   const now = new Date();
-  const intervalStart = startOfMonth(subMonths(now, 5));
+  const safeMonths = Math.max(1, monthsCount);
+  const intervalStart = startOfMonth(subMonths(now, safeMonths - 1));
   const months = eachMonthOfInterval({
     start: intervalStart,
     end: startOfMonth(now),
@@ -63,15 +60,21 @@ const aggregateCustomersByMonth = (customers, bucketMap) => {
   });
 };
 
-export const buildDemoSalesTrendData = (lang = "it") => {
-  const buckets = buildMonthBuckets(lang);
+const hasMeaningfulTrend = (buckets) => {
+  const activeMonths = buckets.filter((bucket) => bucket.orders >= 5).length;
+  const totalRevenue = buckets.reduce((sum, bucket) => sum + bucket.revenue, 0);
 
-  return buckets.map((bucket, index) => {
-    const demo = DEMO_MONTHLY_SALES[index] || {
-      orders: 0,
-      revenue: 0,
-      newClients: 0,
-    };
+  return activeMonths >= Math.min(3, buckets.length) && totalRevenue >= 15000;
+};
+
+export const buildDemoSalesTrendData = (
+  lang = "it",
+  monthsCount = DEFAULT_SALES_TREND_MONTHS
+) => {
+  const buckets = buildMonthBuckets(lang, monthsCount);
+
+  return buckets.map((bucket) => {
+    const demo = getDemoSalesForMonthKey(bucket.key);
 
     return {
       ...bucket,
@@ -82,8 +85,13 @@ export const buildDemoSalesTrendData = (lang = "it") => {
   });
 };
 
-export const buildSalesTrendData = (orders = [], customers = [], lang = "it") => {
-  const buckets = buildMonthBuckets(lang);
+export const buildSalesTrendData = (
+  orders = [],
+  customers = [],
+  lang = "it",
+  monthsCount = DEFAULT_SALES_TREND_MONTHS
+) => {
+  const buckets = buildMonthBuckets(lang, monthsCount);
   const bucketMap = Object.fromEntries(buckets.map((bucket) => [bucket.key, bucket]));
 
   orders.forEach((order) => {
@@ -103,15 +111,32 @@ export const buildSalesTrendData = (orders = [], customers = [], lang = "it") =>
   return buckets;
 };
 
-export const resolveSalesTrendData = (orders = [], customers = [], lang = "it") => {
-  const real = buildSalesTrendData(orders, customers, lang);
-  const hasRealData = real.some(
-    (bucket) => bucket.orders > 0 || bucket.newClients > 0
-  );
+export const resolveSalesTrendData = (
+  orders = [],
+  customers = [],
+  lang = "it",
+  monthsCount = DEFAULT_SALES_TREND_MONTHS
+) => {
+  const real = buildSalesTrendData(orders, customers, lang, monthsCount);
+  const hasAnyRecords = orders.length > 0 || customers.length > 0;
 
-  if (hasRealData) {
-    return { data: real, isDemo: false };
+  if (hasMeaningfulTrend(real)) {
+    return { data: real, isDemo: false, isEmpty: false, monthsCount };
   }
 
-  return { data: buildDemoSalesTrendData(lang), isDemo: true };
+  if (hasAnyRecords) {
+    return {
+      data: buildDemoSalesTrendData(lang, monthsCount),
+      isDemo: true,
+      isEmpty: false,
+      monthsCount,
+    };
+  }
+
+  return {
+    data: buildDemoSalesTrendData(lang, monthsCount),
+    isDemo: true,
+    isEmpty: false,
+    monthsCount,
+  };
 };
