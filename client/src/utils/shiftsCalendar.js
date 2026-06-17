@@ -43,6 +43,60 @@ export const CALENDAR_PALETTE = [
   { bg: "#facc15", text: "#090c64" },
 ];
 
+export const CALENDAR_DEFAULT_DEPARTMENTS = [
+  "specialist reparto it",
+  "cybersecurity",
+  "magazziniere",
+  "Capo reparto",
+  "Manager",
+];
+
+export const CALENDAR_DEPARTMENT_PALETTE = [
+  "#6C8AE4",
+  "#5EC2E0",
+  "#A88EF0",
+  "#F5A97F",
+  "#8DD0A6",
+  "#7BB8E8",
+  "#F97373",
+  "#FACC15",
+  "#2DD4BF",
+  "#4ADE80",
+];
+
+export function getCalendarDepartmentLabel(department = "") {
+  if (department.toLowerCase() === "specialist reparto it") return "reparto IT";
+  return department;
+}
+
+export function getShiftEventDepartments(events = []) {
+  const departments = [
+    ...new Set(events.map((event) => event.department).filter(Boolean)),
+  ];
+
+  if (departments.length) {
+    return departments.sort((a, b) => a.localeCompare(b, "it"));
+  }
+
+  return [...CALENDAR_DEFAULT_DEPARTMENTS];
+}
+
+export function buildDepartmentColorMap(departments = []) {
+  const map = {};
+  departments.forEach((department, index) => {
+    map[department] =
+      CALENDAR_DEPARTMENT_PALETTE[index % CALENDAR_DEPARTMENT_PALETTE.length];
+  });
+  return map;
+}
+
+export function filterShiftEventsByDepartments(events = [], selectedDepartments = []) {
+  if (!selectedDepartments.length) return [];
+  return events.filter(
+    (event) => event.department && selectedDepartments.includes(event.department),
+  );
+}
+
 export const SHIFT_PERIOD_COLORS = {
   early: CALENDAR_PALETTE[1],
   mid: CALENDAR_PALETTE[2],

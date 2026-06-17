@@ -34,6 +34,10 @@ import ShiftQuickManageDrawer from "./ShiftQuickManageDrawer";
 import {
   buildShiftCalendarEvents,
   filterShiftsByWorkplace,
+  filterShiftEventsByDepartments,
+  buildDepartmentColorMap,
+  getCalendarDepartmentLabel,
+  getShiftEventDepartments,
   getVisibleRange,
   getWorkplaceId,
   SHIFT_HOURS,
@@ -204,6 +208,7 @@ export function DashboardCalendar({ canManage = false }) {
   const [formData, setFormData] = useState(emptyForm());
   const [eventToDelete, setEventToDelete] = useState(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [aiKeywords, setAiKeywords] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState(null);
@@ -263,7 +268,7 @@ export function DashboardCalendar({ canManage = false }) {
     return buildDemoCompanyEvents(currentDate, lang);
   }, [eventsData, currentDate, view, lang]);
 
-  const shiftEvents = useMemo(() => {
+  const rawShiftEvents = useMemo(() => {
     const { start, end } = getVisibleRange(currentDate, view, lang);
     const realEvents = buildShiftCalendarEvents({
       rangeStart: start,
@@ -297,6 +302,38 @@ export function DashboardCalendar({ canManage = false }) {
     userShifts,
     authUser,
   ]);
+
+  const departments = useMemo(
+    () => getShiftEventDepartments(rawShiftEvents),
+    [rawShiftEvents],
+  );
+
+  const departmentColorMap = useMemo(
+    () => buildDepartmentColorMap(departments),
+    [departments],
+  );
+
+  useEffect(() => {
+    setSelectedDepartments((current) => {
+      if (!departments.length) return [];
+
+      const stillAvailable = departments.filter((dept) => current.includes(dept));
+      return stillAvailable.length ? stillAvailable : departments;
+    });
+  }, [departments]);
+
+  const shiftEvents = useMemo(
+    () => filterShiftEventsByDepartments(rawShiftEvents, selectedDepartments),
+    [rawShiftEvents, selectedDepartments],
+  );
+
+  const allDepartmentsSelected =
+    departments.length > 0 &&
+    departments.every((dept) => selectedDepartments.includes(dept));
+
+  const toggleAllDepartments = () => {
+    setSelectedDepartments(allDepartmentsSelected ? [] : [...departments]);
+  };
 
   const calendarEvents = mode === "shifts" ? shiftEvents : companyEvents;
 
@@ -467,6 +504,52 @@ export function DashboardCalendar({ canManage = false }) {
             )}
           </div>
         </div>
+
+        {mode === "shifts" && (
+          <div className="flex flex-nowrap items-center gap-2 mb-3 overflow-x-auto">
+            {departments.map((dept) => {
+              const active = selectedDepartments.includes(dept);
+              const color = departmentColorMap[dept] || "#475569";
+
+              return (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() =>
+                    setSelectedDepartments((prev) =>
+                      prev.includes(dept)
+                        ? prev.filter((d) => d !== dept)
+                        : [...prev, dept],
+                    )
+                  }
+                  className={`dept-filter ${active ? "active text-white" : "text-[#090c64] bg-white/70"}`}
+                  style={{ backgroundColor: active ? color : undefined }}
+                >
+                  <span
+                    className={`w-3 h-3 rounded flex items-center justify-center text-[10px] font-bold ${
+                      active ? "bg-white text-black" : "border border-current"
+                    }`}
+                  >
+                    {active ? "✓" : ""}
+                  </span>
+                  {getCalendarDepartmentLabel(dept)}
+                  <span
+                    className="w-2.5 h-2.5 rounded-xl"
+                    style={{ backgroundColor: color }}
+                  />
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={toggleAllDepartments}
+              className="custom-button text-[15px] shrink-0"
+            >
+              {allDepartmentsSelected ? t("deseleziona") : t("seleziona")}
+            </button>
+          </div>
+        )}
 
         <div
           className={`company-events-calendar__body calendar-rbc-wrap calendar-rbc-wrap--${view}${mode === "shifts" ? " calendar-rbc-wrap--shifts" : ""} ${theme === "dark" ? "dark" : "light"}`}
